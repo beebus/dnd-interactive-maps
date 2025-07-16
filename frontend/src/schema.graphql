@@ -1,0 +1,26 @@
+type Query {
+  allLocations: [LocationType]
+}
+
+type Mutation {
+  createLocation(name: String!, x: Float!, y: Float!): CreateLocationType
+}
+
+type CreateLocationType {
+  location: LocationType
+}
+
+type LocationType {
+  id: ID!
+  name: String!
+  x: Float!
+  y: Float!
+  pois: [PointOfInterestType!]!
+}
+
+type PointOfInterestType {
+  id: ID!
+  location: LocationType!
+  title: String!
+  description: String!
+}
