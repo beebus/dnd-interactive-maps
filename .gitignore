@@ -48,7 +48,6 @@ Thumbs.db
 *.bak
 docker-compose.override.yml
 .env
-.env.*
 
 # PyCharm virtualenv (if accidentally created inside project)
 backend/venv/

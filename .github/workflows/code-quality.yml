@@ -1,0 +1,35 @@
+# .github/workflows/code-quality.yml
+name: Code Quality Check
+on: [push, pull_request]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Phase 1a: Scan for hardcoded secrets (TruffleHog)
+      - name: Check for hardcoded secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: HEAD~1
+          head: HEAD
+
+      # Phase 1b: Python security scan (Bandit)
+      - name: Python security scan
+        id: bandit
+        run: |
+          pip install bandit
+          bandit -r backend/ -f txt -o bandit_output.txt || echo "BANDIT_FAILED=true" >> $GITHUB_ENV
+
+      # Phase 2: AI creates GitHub Issue if Bandit found problems
+      - name: Create AI-powered GitHub Issue for findings
+        if: env.BANDIT_FAILED == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install anthropic requests
+          FINDING=$(cat bandit_output.txt)
+          python .github/scripts/ai_issue_creator.py "$FINDING"
