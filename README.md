@@ -75,3 +75,17 @@ docker-compose up
 ```
 
 Only use `--build` if you've changed dependencies or Dockerfiles.
+
+## Running Tests
+
+### Frontend Tests
+To run frontend tests (React/TypeScript with Jest):
+```
+cd frontend
+npm test
+```
+
+### Backend Tests
+To run backend tests (Django with PostgreSQL):
+1. Ensure the app is running: `docker-compose up --build`
+2. Run tests: `docker-compose exec backend python manage.py test`
