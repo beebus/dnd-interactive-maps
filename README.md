@@ -81,8 +81,7 @@ Only use `--build` if you've changed dependencies or Dockerfiles.
 ### Frontend Tests
 To run frontend tests (React/TypeScript with Jest):
 ```
-cd frontend
-npm test
+docker-compose exec frontend npm test
 ```
 
 ### Backend Tests
