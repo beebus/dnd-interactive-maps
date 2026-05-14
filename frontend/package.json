@@ -32,6 +32,11 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@apollo/client|@apollo/client/react|@apollo/client/utilities|@apollo/client/core|@apollo/client/link|@apollo/client/cache|@apollo/client/errors|@apollo/client/testing)/)"
+    ]
+  },
   "browserslist": {
     "production": [
       ">0.2%",

@@ -1,4 +1,5 @@
-import { useQuery, useMutation, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import React, { useState } from 'react';
 import SearchBar, { Location as SearchLocation } from '../components/SearchBar';
 
@@ -29,23 +30,40 @@ const CREATE_LOCATION = gql`
   }
 `;
 
+interface Poi {
+  title: string;
+  description: string;
+}
+
+interface LocationData {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  pois: Poi[];
+}
+
+interface GetLocationsData {
+  allLocations: LocationData[];
+}
+
 function MapPage({ mapName }: { mapName: string }) {
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const [highlighted, setHighlighted] = useState<SearchLocation | null>(null);
   const [editMode, setEditMode] = useState(false);
 
-  const { data, loading, error, refetch } = useQuery(GET_LOCATIONS);
+  const { data, loading, error, refetch } = useQuery<GetLocationsData>(GET_LOCATIONS);
   const [createLocation] = useMutation(CREATE_LOCATION);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error loading map data</p>;
 
-  const locations: SearchLocation[] = data.allLocations.map((loc: any) => ({
+  const locations: SearchLocation[] = (data?.allLocations ?? []).map((loc) => ({
     id: loc.name,
     name: loc.name,
     x: loc.x,
     y: loc.y,
-    description: loc.pois.map((p: any) => `${p.title}: ${p.description}`).join('\n'),
+    description: loc.pois.map((p) => `${p.title}: ${p.description}`).join('\n'),
   }));
 
   return (
