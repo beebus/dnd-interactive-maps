@@ -2,5 +2,5 @@ FROM node:26
 
 WORKDIR /app
 COPY . .
-RUN npm install
-CMD ["npm", "start"]
+RUN npm install --include=dev
+CMD ["npm", "run", "dev"]
