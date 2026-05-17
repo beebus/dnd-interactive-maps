@@ -17,6 +17,10 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    ignore:
+      # vite 8 is incompatible with @vitejs/plugin-react until it adds vite 8 peer support
+      - dependency-name: "vite"
+        versions: [ ">=8" ]
 
   # Docker - frontend
   - package-ecosystem: "docker"
