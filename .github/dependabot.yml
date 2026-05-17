@@ -21,6 +21,8 @@ updates:
       # vite 8 is incompatible with @vitejs/plugin-react until it adds vite 8 peer support
       - dependency-name: "vite"
         versions: [ ">=8" ]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
 
   # Docker - frontend
   - package-ecosystem: "docker"
