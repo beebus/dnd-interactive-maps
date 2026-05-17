@@ -34,8 +34,13 @@
   },
   "jest": {
     "transformIgnorePatterns": [
-      "node_modules/(?!(@apollo/client|@apollo/client/react|@apollo/client/utilities|@apollo/client/core|@apollo/client/link|@apollo/client/cache|@apollo/client/errors|@apollo/client/testing)/)"
-    ]
+      "node_modules/(?!(react-router-dom|react-router|@apollo/client|@apollo/client/react|@apollo/client/utilities|@apollo/client/core|@apollo/client/link|@apollo/client/cache|@apollo/client/errors|@apollo/client/testing)/)"
+    ],
+    "moduleNameMapper": {
+      "^react-router-dom$": "<rootDir>/node_modules/react-router-dom/dist/index.js",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router-dom/dist/index.js",
+      "^react-router$": "<rootDir>/node_modules/react-router/dist/development/index.js"
+    }
   },
   "browserslist": {
     "production": [
