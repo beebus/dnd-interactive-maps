@@ -6,7 +6,7 @@ import MapPage from './pages/MapPage';
 
 function App() {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/maps/underdark" element={<MapPage mapName="Underdark" />} />
