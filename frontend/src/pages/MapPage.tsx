@@ -3,9 +3,10 @@ import { useQuery, useMutation } from '@apollo/client/react';
 import React, { useState } from 'react';
 import SearchBar, { Location as SearchLocation } from '../components/SearchBar';
 
+// eslint-disable-next-line
 const GET_LOCATIONS = gql`
-  query {
-    allLocations {
+  query GetLocations($mapName: String!) {
+    allLocations(mapName: $mapName) {
       name
       x
       y
@@ -17,9 +18,10 @@ const GET_LOCATIONS = gql`
   }
 `;
 
+// eslint-disable-next-line
 const CREATE_LOCATION = gql`
-  mutation CreateLocation($name: String!, $x: Float!, $y: Float!) {
-    createLocation(name: $name, x: $x, y: $y) {
+  mutation CreateLocation($name: String!, $x: Float!, $y: Float!, $mapName: String!) {
+    createLocation(name: $name, x: $x, y: $y, mapName: $mapName) {
       location {
         id
         name
@@ -51,9 +53,27 @@ function MapPage({ mapName }: { mapName: string }) {
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const [highlighted, setHighlighted] = useState<SearchLocation | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [imageScale, setImageScale] = useState(1);
+  const imgRef = React.useRef<HTMLImageElement>(null);
 
-  const { data, loading, error, refetch } = useQuery<GetLocationsData>(GET_LOCATIONS);
+  const { data, loading, error, refetch } = useQuery<GetLocationsData>(GET_LOCATIONS, {
+    variables: { mapName: mapName.toLowerCase() },
+  });
   const [createLocation] = useMutation(CREATE_LOCATION);
+
+  const updateImageScale = () => {
+    if (imgRef.current) {
+      const rect = imgRef.current.getBoundingClientRect();
+      const nativeWidth = 1200;
+      setImageScale(rect.width / nativeWidth);
+    }
+  };
+
+  React.useEffect(() => {
+    updateImageScale();
+    window.addEventListener('resize', updateImageScale);
+    return () => window.removeEventListener('resize', updateImageScale);
+  }, []);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error loading map data</p>;
@@ -79,6 +99,7 @@ function MapPage({ mapName }: { mapName: string }) {
       />
 
       <img
+        ref={imgRef}
         src={`/maps/${mapName.toLowerCase()}.jpg`}
         alt={mapName}
         style={{
@@ -89,10 +110,11 @@ function MapPage({ mapName }: { mapName: string }) {
           padding: 0,
           objectFit: 'contain',
         }}
+        onLoad={updateImageScale}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          const x = Math.round(e.clientX - rect.left);
-          const y = Math.round(e.clientY - rect.top);
+          const x = Math.round((e.clientX - rect.left) / imageScale);
+          const y = Math.round((e.clientY - rect.top) / imageScale);
           setCoords({ x, y });
         }}
         onMouseLeave={() => setCoords(null)}
@@ -100,13 +122,13 @@ function MapPage({ mapName }: { mapName: string }) {
           if (!editMode) return;
 
           const rect = e.currentTarget.getBoundingClientRect();
-          const x = Math.round(e.clientX - rect.left);
-          const y = Math.round(e.clientY - rect.top);
+          const x = Math.round((e.clientX - rect.left) / imageScale);
+          const y = Math.round((e.clientY - rect.top) / imageScale);
           const name = prompt('Enter a name for this location:');
           if (!name) return;
 
           try {
-            await createLocation({ variables: { name, x, y } });
+            await createLocation({ variables: { name, x, y, mapName: mapName.toLowerCase() } });
             await refetch();
           } catch (err) {
             alert('Failed to create location.');
@@ -138,8 +160,8 @@ function MapPage({ mapName }: { mapName: string }) {
           key={loc.name}
           style={{
             position: 'absolute',
-            top: `${loc.y}px`,
-            left: `${loc.x}px`,
+            top: `${loc.y * imageScale}px`,
+            left: `${loc.x * imageScale}px`,
             transform: 'translate(-50%, -50%)',
             cursor: 'pointer',
             fontSize: highlighted?.name === loc.name ? '24px' : '18px',
