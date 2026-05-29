@@ -1,9 +1,11 @@
 from django.db import models
 
+
 class Location(models.Model):
     name = models.CharField(max_length=100)
     x = models.FloatField()
     y = models.FloatField()
+    map = models.CharField(max_length=50, default="underdark")
 
     def __str__(self):
         return self.name

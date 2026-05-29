@@ -1,0 +1,120 @@
+# Map Locations Agent
+# Compares text labels on any map image against database pins and reports
+# (or creates GitHub issues for) missing pins and name mismatches.
+#
+# Triggered manually via workflow_dispatch or on a weekly schedule.
+#
+# Required GitHub repository secrets (Settings → Secrets and variables → Actions):
+#   ANTHROPIC_API_KEY  — Anthropic API key
+#   SECRET_KEY         — Django SECRET_KEY
+#   DB_NAME            — postgres database name
+#   DB_USER            — postgres user
+#   DB_PASSWORD        — postgres password
+#   DB_HOST            — set to "localhost" for CI
+#   DB_PORT            — postgres port               (e.g., 5432)
+#
+# GITHUB_TOKEN is provided automatically by Actions — no secret needed.
+name: Map Locations Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      map:
+        description: "Map slug to analyze (must match the image filename in frontend/public/maps/)"
+        required: true
+        default: underdark
+        type: string
+      create_issues:
+        description: Create GitHub issues for findings
+        required: false
+        default: false
+        type: boolean
+      threshold:
+        description: "Proximity threshold 0-1 (default 0.06 = 6% of image size)"
+        required: false
+        default: "0.06"
+        type: string
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday 09:00 UTC — runs underdark by default
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_ready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Apply migrations
+        working-directory: backend
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+        run: python manage.py migrate --no-input
+
+      - name: Load pin fixtures
+        working-directory: backend
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+        run: |
+          if [ -f mapdata/fixtures/locations.json ]; then
+            python manage.py loaddata mapdata/fixtures/locations.json
+            echo "Fixtures loaded."
+          else
+            echo "No fixtures file found — DB will be empty (all map labels will appear as missing)."
+          fi
+
+      - name: Run map analysis
+        working-directory: backend
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+        run: |
+          MAP="${{ inputs.map || 'underdark' }}"
+          THRESHOLD="${{ inputs.threshold || '0.06' }}"
+          EXTRA=""
+          if [ "${{ inputs.create_issues }}" = "true" ]; then
+            EXTRA="--create-issues"
+          fi
+          python manage.py analyze_map --map "$MAP" --threshold "$THRESHOLD" $EXTRA

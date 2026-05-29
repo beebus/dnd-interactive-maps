@@ -6,8 +6,9 @@ containerized with Docker.
 
 ## Features
 - Interactive map viewing and editing
-- Support for Underdark and Elturel maps
+- Support for Underdark and Elturel maps (easily extensible to more)
 - Edit mode for dungeon masters
+- AI-powered map analysis agent to detect missing or mismatched location pins
 
 ## Tech Stack
 - **Frontend:** React, TypeScript
@@ -88,3 +89,35 @@ docker-compose exec frontend npm test
 To run backend tests (Django with PostgreSQL):
 1. Ensure the app is running: `docker-compose up --build`
 2. Run tests: `docker-compose exec backend python manage.py test`
+
+## 🤖 Map Locations Agent
+
+The `analyze_map` management command uses Claude vision to scan a map image, compare
+identified locations against database pins, and report (or auto-create) missing entries.
+
+### Basic usage
+```
+docker compose exec backend python manage.py analyze_map --map underdark
+```
+
+### Options
+| Flag | Description |
+|---|---|
+| `--map` | Map slug to analyze (`underdark`, `elturel`, …). Default: `underdark` |
+| `--threshold` | Normalised distance tolerance for matching pins (default: `0.06`) |
+| `--display-width` | Viewport width used when pins were created (default: native image width) |
+| `--create-pins` | Write missing locations to the database |
+| `--create-issues` | Post a GitHub issue for each inconsistency found |
+| `--image-path` | Override the path to the map image |
+
+### Restoring pins from the fixture
+If the database is ever wiped, restore all location pins with:
+```
+docker compose exec backend python manage.py loaddata mapdata/fixtures/locations.json
+```
+
+### Exporting pins to the fixture
+After adding new pins (via Edit Mode or `--create-pins`), export them for CI:
+```
+docker compose exec backend python manage.py dumpdata mapdata.location --indent 2 > backend/mapdata/fixtures/locations.json
+```
