@@ -93,6 +93,7 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const [highlighted, setHighlighted] = useState<SearchLocation | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [marksVisible, setMarksVisible] = useState(true);
   const [imageScale, setImageScale] = useState(1);
   const imgRef = React.useRef<HTMLImageElement>(null);
 
@@ -141,6 +142,8 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
         onSelectLocation={(loc) => setHighlighted(loc)}
         editMode={editMode}
         setEditMode={setEditMode}
+        marksVisible={marksVisible}
+        onToggleMarks={() => setMarksVisible(v => !v)}
         mapLocation={mapLocation}
         currentVariantIndex={variantIndex}
         onSwitchVariant={setVariantIndex}
@@ -206,7 +209,7 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
         </div>
       )}
 
-      {(highlighted ? [highlighted] : locations).map((loc) => (
+      {marksVisible && (highlighted ? [highlighted] : locations).map((loc) => (
         <div
           key={loc.name}
           style={{
