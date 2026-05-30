@@ -20,24 +20,27 @@ const mockMapLocation: MapLocation = {
   ],
 };
 
-function renderSearchBar(editMode = false) {
+function renderSearchBar(editMode = false, marksVisible = true) {
   const onSelectLocation = vi.fn();
   const setEditMode = vi.fn();
   const onSwitchVariant = vi.fn();
   const onGoHome = vi.fn();
+  const onToggleMarks = vi.fn();
   render(
     <SearchBar
       locations={mockLocations}
       onSelectLocation={onSelectLocation}
       editMode={editMode}
       setEditMode={setEditMode}
+      marksVisible={marksVisible}
+      onToggleMarks={onToggleMarks}
       mapLocation={mockMapLocation}
       currentVariantIndex={0}
       onSwitchVariant={onSwitchVariant}
       onGoHome={onGoHome}
     />
   );
-  return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome };
+  return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome, onToggleMarks };
 }
 
 beforeEach(() => {
@@ -123,4 +126,33 @@ test('calls setEditMode(false) when Exit Edit Mode is clicked', () => {
   fireEvent.click(screen.getByText('☰'));
   fireEvent.click(screen.getByText('Exit Edit Mode'));
   expect(setEditMode).toHaveBeenCalledWith(false);
+});
+
+test('shows Hide all Marks label in menu when marksVisible is true', () => {
+  renderSearchBar(false, true);
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Hide all Marks')).toBeInTheDocument();
+  expect(screen.queryByText('Show all Marks')).not.toBeInTheDocument();
+});
+
+test('shows Show all Marks label in menu when marksVisible is false', () => {
+  renderSearchBar(false, false);
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Show all Marks')).toBeInTheDocument();
+  expect(screen.queryByText('Hide all Marks')).not.toBeInTheDocument();
+});
+
+test('calls onToggleMarks when the marks toggle item is clicked', () => {
+  const { onToggleMarks } = renderSearchBar();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Hide all Marks'));
+  expect(onToggleMarks).toHaveBeenCalledTimes(1);
+});
+
+test('closes the menu after clicking the marks toggle item', () => {
+  renderSearchBar();
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Hide all Marks')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Hide all Marks'));
+  expect(screen.queryByText('Hide all Marks')).not.toBeInTheDocument();
 });

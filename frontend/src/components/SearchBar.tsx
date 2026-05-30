@@ -15,6 +15,8 @@ interface SearchBarProps {
   onSelectLocation: (location: Location) => void;
   editMode: boolean;
   setEditMode: (value: boolean) => void;
+  marksVisible: boolean;
+  onToggleMarks: () => void;
   mapLocation: MapLocation;
   currentVariantIndex: number;
   onSwitchVariant: (index: number) => void;
@@ -26,6 +28,8 @@ export default function SearchBar({
   onSelectLocation,
   editMode,
   setEditMode,
+  marksVisible,
+  onToggleMarks,
   mapLocation,
   currentVariantIndex,
   onSwitchVariant,
@@ -66,7 +70,9 @@ export default function SearchBar({
           <div className="menu-item" onClick={() => { setEditMode(!editMode); setMenuOpen(false); }}>
             {editMode ? 'Exit Edit Mode' : 'Enter Edit Mode'}
           </div>
-          <div className="menu-item">Show/Hide all Marks</div>
+          <div className="menu-item" onClick={() => { onToggleMarks(); setMenuOpen(false); }}>
+            {marksVisible ? 'Hide all Marks' : 'Show all Marks'}
+          </div>
           <div className="menu-item">Distance and Time</div>
 
           {hasVariants && (
