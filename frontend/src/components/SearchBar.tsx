@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './SearchBar.css';
 import { MapLocation } from '../data/maps';
+import ContactModal from './ContactModal';
+import InformationModal from './InformationModal';
 
 export interface Location {
   id: string;
@@ -78,6 +80,8 @@ export default function SearchBar({
   const [results, setResults] = useState<Location[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
     if (query.trim()) {
@@ -146,8 +150,8 @@ export default function SearchBar({
             ← All Maps
           </div>
           <hr />
-          <div className="menu-item">Send a Comment</div>
-          <div className="menu-item">Information</div>
+          <div className="menu-item" onClick={() => { setContactOpen(true); setMenuOpen(false); }}>Send a Comment</div>
+          <div className="menu-item" onClick={() => { setInfoOpen(true); setMenuOpen(false); }}>Information</div>
         </div>
       )}
 
@@ -212,6 +216,9 @@ export default function SearchBar({
           ))}
         </div>
       )}
+
+      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
+      {infoOpen && <InformationModal onClose={() => setInfoOpen(false)} />}
     </div>
   );
 }
