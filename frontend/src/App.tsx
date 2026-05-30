@@ -7,11 +7,10 @@ import MapPage from './pages/MapPage';
 function App() {
   return (
     <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/maps/underdark" element={<MapPage mapName="Underdark" />} />
-          <Route path="/maps/elturel" element={<MapPage mapName="Elturel" />} />
-        </Routes>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/maps/:slug" element={<MapPage />} />
+      </Routes>
     </Router>
   );
 }

@@ -1,7 +1,9 @@
 import { gql, TypedDocumentNode } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import SearchBar, { Location as SearchLocation } from '../components/SearchBar';
+import { getMapLocation, MapLocation } from '../data/maps';
 
 interface Poi {
   title: string;
@@ -69,16 +71,37 @@ const CREATE_LOCATION: TypedDocumentNode<CreateLocationData, CreateLocationVaria
   }
 `;
 
-function MapPage({ mapName }: { mapName: string }) {
+function NotFound() {
+  const navigate = useNavigate();
+  return (
+    <div style={{ padding: '4rem', textAlign: 'center', color: '#e8d9b5', background: '#0d0d0d', minHeight: '100vh' }}>
+      <h2 style={{ color: '#c9a84c' }}>Map not found</h2>
+      <p>No map exists for that location.</p>
+      <button
+        onClick={() => navigate('/')}
+        style={{ marginTop: '1rem', padding: '0.5rem 1.2rem', cursor: 'pointer' }}
+      >
+        Return to Maps
+      </button>
+    </div>
+  );
+}
+
+function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
+  const navigate = useNavigate();
+  const [variantIndex, setVariantIndex] = useState(0);
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const [highlighted, setHighlighted] = useState<SearchLocation | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [imageScale, setImageScale] = useState(1);
   const imgRef = React.useRef<HTMLImageElement>(null);
 
+  const currentVariant = mapLocation.maps[variantIndex];
+
   const { data, loading, error, refetch } = useQuery(GET_LOCATIONS, {
-    variables: { mapName: mapName.toLowerCase() },
+    variables: { mapName: currentVariant.mapKey },
   });
+
   const [createLocation] = useMutation(CREATE_LOCATION);
 
   const updateImageScale = () => {
@@ -95,8 +118,13 @@ function MapPage({ mapName }: { mapName: string }) {
     return () => window.removeEventListener('resize', updateImageScale);
   }, []);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error loading map data</p>;
+  // Reset highlight when switching variants
+  React.useEffect(() => {
+    setHighlighted(null);
+  }, [variantIndex]);
+
+  if (loading) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Loading...</p>;
+  if (error) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Error loading map data</p>;
 
   const locations: SearchLocation[] = (data?.allLocations ?? []).map((loc) => ({
     id: loc.name,
@@ -108,20 +136,21 @@ function MapPage({ mapName }: { mapName: string }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1100 }}>
-      </div>
-
       <SearchBar
         locations={locations}
         onSelectLocation={(loc) => setHighlighted(loc)}
         editMode={editMode}
         setEditMode={setEditMode}
+        mapLocation={mapLocation}
+        currentVariantIndex={variantIndex}
+        onSwitchVariant={setVariantIndex}
+        onGoHome={() => navigate('/')}
       />
 
       <img
         ref={imgRef}
-        src={`/maps/${mapName.toLowerCase()}.jpg`}
-        alt={mapName}
+        src={`/maps/${currentVariant.filename}`}
+        alt={currentVariant.label}
         style={{
           display: 'block',
           width: '100vw',
@@ -148,7 +177,9 @@ function MapPage({ mapName }: { mapName: string }) {
           if (!name) return;
 
           try {
-            await createLocation({ variables: { name, x, y, mapName: mapName.toLowerCase() } });
+            await createLocation({
+              variables: { name, x, y, mapName: currentVariant.mapKey },
+            });
             await refetch();
           } catch (err) {
             alert('Failed to create location.');
@@ -196,6 +227,15 @@ function MapPage({ mapName }: { mapName: string }) {
       ))}
     </div>
   );
+}
+
+function MapPage() {
+  const { slug } = useParams<{ slug: string }>();
+  const mapLocation = slug ? getMapLocation(slug) : undefined;
+
+  if (!mapLocation) return <NotFound />;
+
+  return <MapPageInner mapLocation={mapLocation} />;
 }
 
 export default MapPage;

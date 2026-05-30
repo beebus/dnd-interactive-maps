@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import SearchBar, { Location } from './SearchBar';
+import { MapLocation } from '../data/maps';
 
 const mockLocations: Location[] = [
   { id: '1', name: 'Menzoberranzan', x: 195, y: 50, description: 'A drow city' },
@@ -9,18 +10,34 @@ const mockLocations: Location[] = [
   { id: '3', name: 'Gracklstugh', x: 165, y: 99, description: 'A duergar city' },
 ];
 
+const mockMapLocation: MapLocation = {
+  slug: 'underdark',
+  name: 'Underdark',
+  description: 'A vast subterranean realm.',
+  tags: ['Underground'],
+  maps: [
+    { filename: 'Underdark_1.jpg', label: 'Underdark', description: '', mapKey: 'underdark' },
+  ],
+};
+
 function renderSearchBar(editMode = false) {
   const onSelectLocation = vi.fn();
   const setEditMode = vi.fn();
+  const onSwitchVariant = vi.fn();
+  const onGoHome = vi.fn();
   render(
     <SearchBar
       locations={mockLocations}
       onSelectLocation={onSelectLocation}
       editMode={editMode}
       setEditMode={setEditMode}
+      mapLocation={mockMapLocation}
+      currentVariantIndex={0}
+      onSwitchVariant={onSwitchVariant}
+      onGoHome={onGoHome}
     />
   );
-  return { onSelectLocation, setEditMode };
+  return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome };
 }
 
 beforeEach(() => {
