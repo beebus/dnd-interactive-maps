@@ -55,7 +55,6 @@ export default function SearchBar({ locations, onSelectLocation, editMode, setEd
           <hr />
           <div className="menu-item">Underdark Map</div>
           <div className="menu-item">Elturel Map</div>
-          {/* Add more as needed */}
           <hr />
           <div className="menu-item">Send a Comment</div>
           <div className="menu-item">Information</div>

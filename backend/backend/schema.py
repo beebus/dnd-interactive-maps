@@ -24,6 +24,7 @@ class CreateLocation(graphene.Mutation):
 
     location = graphene.Field(LocationType)
 
+    # noinspection PyMethodMayBeStatic
     def mutate(self, info, name, x, y, map_name):  # noqa: F841
         loc = Location(name=name, x=x, y=y, map=map_name)
         loc.save()
@@ -33,6 +34,7 @@ class CreateLocation(graphene.Mutation):
 class Query(graphene.ObjectType):
     all_locations = graphene.List(LocationType, map_name=graphene.String())
 
+    # noinspection PyMethodMayBeStatic
     def resolve_all_locations(self, info, map_name=None):  # noqa: F841
         qs = Location.objects.all()
         if map_name is not None:

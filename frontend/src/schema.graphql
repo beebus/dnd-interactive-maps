@@ -1,9 +1,9 @@
 type Query {
-  allLocations: [LocationType]
+  allLocations(mapName: String): [LocationType]
 }
 
 type Mutation {
-  createLocation(name: String!, x: Float!, y: Float!): CreateLocationType
+  createLocation(name: String!, x: Float!, y: Float!, mapName: String!): CreateLocationType
 }
 
 type CreateLocationType {
