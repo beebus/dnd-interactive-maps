@@ -1,36 +1,7 @@
-import { gql } from '@apollo/client';
+import { gql, TypedDocumentNode } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import React, { useState } from 'react';
 import SearchBar, { Location as SearchLocation } from '../components/SearchBar';
-
-// eslint-disable-next-line
-const GET_LOCATIONS = gql`
-  query GetLocations($mapName: String!) {
-    allLocations(mapName: $mapName) {
-      name
-      x
-      y
-      pois {
-        title
-        description
-      }
-    }
-  }
-`;
-
-// eslint-disable-next-line
-const CREATE_LOCATION = gql`
-  mutation CreateLocation($name: String!, $x: Float!, $y: Float!, $mapName: String!) {
-    createLocation(name: $name, x: $x, y: $y, mapName: $mapName) {
-      location {
-        id
-        name
-        x
-        y
-      }
-    }
-  }
-`;
 
 interface Poi {
   title: string;
@@ -49,6 +20,55 @@ interface GetLocationsData {
   allLocations: LocationData[];
 }
 
+interface GetLocationsVariables {
+  mapName: string;
+}
+
+interface CreateLocationData {
+  createLocation: {
+    location: {
+      id: string;
+      name: string;
+      x: number;
+      y: number;
+    };
+  };
+}
+
+interface CreateLocationVariables {
+  name: string;
+  x: number;
+  y: number;
+  mapName: string;
+}
+
+const GET_LOCATIONS: TypedDocumentNode<GetLocationsData, GetLocationsVariables> = gql`
+  query GetLocations($mapName: String!) {
+    allLocations(mapName: $mapName) {
+      name
+      x
+      y
+      pois {
+        title
+        description
+      }
+    }
+  }
+`;
+
+const CREATE_LOCATION: TypedDocumentNode<CreateLocationData, CreateLocationVariables> = gql`
+  mutation CreateLocation($name: String!, $x: Float!, $y: Float!, $mapName: String!) {
+    createLocation(name: $name, x: $x, y: $y, mapName: $mapName) {
+      location {
+        id
+        name
+        x
+        y
+      }
+    }
+  }
+`;
+
 function MapPage({ mapName }: { mapName: string }) {
   const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const [highlighted, setHighlighted] = useState<SearchLocation | null>(null);
@@ -56,7 +76,7 @@ function MapPage({ mapName }: { mapName: string }) {
   const [imageScale, setImageScale] = useState(1);
   const imgRef = React.useRef<HTMLImageElement>(null);
 
-  const { data, loading, error, refetch } = useQuery<GetLocationsData>(GET_LOCATIONS, {
+  const { data, loading, error, refetch } = useQuery(GET_LOCATIONS, {
     variables: { mapName: mapName.toLowerCase() },
   });
   const [createLocation] = useMutation(CREATE_LOCATION);

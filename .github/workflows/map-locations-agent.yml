@@ -5,13 +5,13 @@
 # Triggered manually via workflow_dispatch or on a weekly schedule.
 #
 # Required GitHub repository secrets (Settings → Secrets and variables → Actions):
-#   ANTHROPIC_API_KEY  — Anthropic API key
-#   SECRET_KEY         — Django SECRET_KEY
-#   DB_NAME            — postgres database name
-#   DB_USER            — postgres user
-#   DB_PASSWORD        — postgres password
-#   DB_HOST            — set to "localhost" for CI
-#   DB_PORT            — postgres port               (e.g., 5432)
+#   ANTHROPIC_API_KEY — Anthropic API key
+#   SECRET_KEY — Django SECRET_KEY
+#   DB_NAME — postgres database name
+#   DB_USER — postgres user
+#   DB_PASSWORD — postgres password
+#   DB_HOST — set to "localhost" for CI
+#   DB_PORT — postgres port (e.g., 5432)
 #
 # GITHUB_TOKEN is provided automatically by Actions — no secret needed.
 name: Map Locations Agent

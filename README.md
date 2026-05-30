@@ -39,50 +39,49 @@ cp backend/.env.example backend/.env
 ```
 - Then edit `backend/.env` with your actual `DB_PASSWORD`, `SECRET_KEY`, etc.
 
-### Starting the App
+### Starting the App (Dev)
 
-1. **Make sure Docker Desktop is running**
+Running the frontend natively (outside Docker) avoids WSL2 overhead and filesystem
+polling lag on Windows. Keep the backend and database in Docker, run Vite locally.
 
-2. **Open Command Prompt or PowerShell** and navigate to your project:
-   ```
-   cd C:\Users\beebs\PycharmProjects\dnd-interactive-maps
-   ```
+**Terminal 1 — backend + database:**
+```
+docker compose up db backend
+```
 
-3. **Start all services** with Docker Compose:
-   ```
-   docker-compose up --build
-   ```
+Wait until you see:
+- `database system is ready to accept connections` (database ready)
+- `Watching for file changes with StatReloader` (backend ready)
 
-4. **Wait for all services to start** – you'll see messages like:
-   - `database system is ready to accept connections` (Database ready)
-   - `Watching for file changes with StatReloader` (Backend ready)
-   - `webpack compiled successfully` or `Compiled successfully!` (Frontend ready)
+**Terminal 2 — frontend:**
+```
+cd frontend
+npm run dev
+```
 
-5. **Open your browser** to:
-   - **http://localhost:3000** – to view the React app
+Then open **http://localhost:3000** in your browser.
 
 ### Stopping the App
 
-Press **Ctrl+C** in the terminal where docker-compose is running, then run:
+Press **Ctrl+C** in both terminals, then tear down the Docker services:
 ```
-docker-compose down
-```
-
-### Starting the App (After First Build)
-
-After the first build, you can start faster without rebuilding:
-```
-docker-compose up
+docker compose down
 ```
 
-Only use `--build` if you've changed dependencies or Dockerfiles.
+### Rebuilding after dependency changes
+
+Only needed if you've changed `requirements.txt` or a Dockerfile:
+```
+docker compose up db backend --build
+```
 
 ## Running Tests
 
 ### Frontend Tests
 To run frontend tests (React/TypeScript with Jest):
 ```
-docker-compose exec frontend npm test
+cd frontend
+npm test
 ```
 
 ### Backend Tests
@@ -101,14 +100,14 @@ docker compose exec backend python manage.py analyze_map --map underdark
 ```
 
 ### Options
-| Flag | Description |
-|---|---|
-| `--map` | Map slug to analyze (`underdark`, `elturel`, …). Default: `underdark` |
-| `--threshold` | Normalised distance tolerance for matching pins (default: `0.06`) |
+| Flag              | Description                                                              |
+|-------------------|--------------------------------------------------------------------------|
+| `--map`           | Map slug to analyze (`underdark`, `elturel`, …). Default: `underdark`    |
+| `--threshold`     | Normalised distance tolerance for matching pins (default: `0.06`)        |
 | `--display-width` | Viewport width used when pins were created (default: native image width) |
-| `--create-pins` | Write missing locations to the database |
-| `--create-issues` | Post a GitHub issue for each inconsistency found |
-| `--image-path` | Override the path to the map image |
+| `--create-pins`   | Write missing locations to the database                                  |
+| `--create-issues` | Post a GitHub issue for each inconsistency found                         |
+| `--image-path`    | Override the path to the map image                                       |
 
 ### Restoring pins from the fixture
 If the database is ever wiped, restore all location pins with:

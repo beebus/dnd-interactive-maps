@@ -110,6 +110,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(f"Claude identified {len(image_locs)} locations on the map")
         )
 
+        # noinspection PyUnresolvedReferences
         db_locs = [
             {
                 "id": loc.id,
