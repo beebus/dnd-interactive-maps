@@ -21,6 +21,39 @@ interface SearchBarProps {
   currentVariantIndex: number;
   onSwitchVariant: (index: number) => void;
   onGoHome: () => void;
+  distanceMode: boolean;
+  onToggleDistanceMode: () => void;
+  distanceFeet: number;
+  distanceWaypoints: number;
+  isRealm: boolean;
+  hasDistanceScale: boolean;
+}
+
+const TRAVEL_MODES = [
+  { label: 'On foot (normal)', feetPerMin: 264, cityOnly: false },
+  { label: 'On foot (fast)', feetPerMin: 352, cityOnly: false },
+  { label: 'On foot (slow)', feetPerMin: 176, cityOnly: false },
+  { label: 'Rowboat', feetPerMin: 132, cityOnly: true },
+  { label: 'Keelboat', feetPerMin: 88, cityOnly: true },
+];
+
+function formatDistance(feet: number): string {
+  if (feet < 5280) return `${Math.round(feet).toLocaleString()} ft`;
+  const miles = feet / 5280;
+  return miles < 100 ? `${miles.toFixed(1)} mi` : `${Math.round(miles).toLocaleString()} mi`;
+}
+
+function formatTime(feet: number, feetPerMin: number): string {
+  const minutes = feet / feetPerMin;
+  if (minutes < 1) return '< 1 min';
+  if (minutes < 60) return `${Math.round(minutes)} min`;
+  const totalHours = minutes / 60;
+  const hours = Math.floor(totalHours);
+  const mins = Math.round((totalHours - hours) * 60);
+  if (hours < 24) return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
+  const days = Math.floor(hours / 24);
+  const hrs = hours % 24;
+  return hrs > 0 ? `${days} days ${hrs} hr` : `${days} days`;
 }
 
 export default function SearchBar({
@@ -34,10 +67,17 @@ export default function SearchBar({
   currentVariantIndex,
   onSwitchVariant,
   onGoHome,
+  distanceMode,
+  onToggleDistanceMode,
+  distanceFeet,
+  distanceWaypoints,
+  isRealm,
+  hasDistanceScale,
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Location[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
 
   useEffect(() => {
     if (query.trim()) {
@@ -50,7 +90,12 @@ export default function SearchBar({
     }
   }, [query, locations]);
 
+  useEffect(() => {
+    if (distanceMode) setPanelCollapsed(false);
+  }, [distanceMode]);
+
   const hasVariants = mapLocation.maps.length > 1;
+  const visibleTravelModes = TRAVEL_MODES.filter(m => !m.cityOnly || !isRealm);
 
   return (
     <div className="search-bar">
@@ -73,7 +118,12 @@ export default function SearchBar({
           <div className="menu-item" onClick={() => { onToggleMarks(); setMenuOpen(false); }}>
             {marksVisible ? 'Hide all Marks' : 'Show all Marks'}
           </div>
-          <div className="menu-item">Distance and Time</div>
+          <div
+            className={`menu-item${distanceMode ? ' menu-item--active' : ''}`}
+            onClick={() => { onToggleDistanceMode(); setMenuOpen(false); }}
+          >
+            {distanceMode ? 'Exit Distance Mode' : 'Distance and Time'}
+          </div>
 
           {hasVariants && (
             <>
@@ -98,6 +148,54 @@ export default function SearchBar({
           <hr />
           <div className="menu-item">Send a Comment</div>
           <div className="menu-item">Information</div>
+        </div>
+      )}
+
+      {distanceMode && (
+        <div className="distance-panel">
+          {!panelCollapsed && (
+            <div className="distance-content">
+              <p className="distance-instruction">
+                {distanceWaypoints === 0
+                  ? 'Click on the map to determine the starting point.'
+                  : distanceWaypoints === 1
+                  ? 'Click on the map to determine the destination.'
+                  : <>Keep drawing your path by clicking on the map, then press <strong>ESC</strong> to go back to normal mode.</>
+                }
+              </p>
+
+              {distanceFeet > 0 && (
+                <>
+                  {hasDistanceScale ? (
+                    <>
+                      <div className="distance-section">
+                        <div className="distance-label">DISTANCE</div>
+                        <div className="distance-value">{formatDistance(distanceFeet)}</div>
+                      </div>
+                      <div className="distance-section">
+                        <div className="distance-label">TRAVEL</div>
+                        {visibleTravelModes.map(m => (
+                          <div key={m.label} className="travel-mode">
+                            {m.label}: <span className="travel-time">{formatTime(distanceFeet, m.feetPerMin)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="distance-no-scale">No scale configured for this map.</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <button
+            className="distance-collapse"
+            onClick={() => setPanelCollapsed(v => !v)}
+            title={panelCollapsed ? 'Expand' : 'Collapse'}
+          >
+            {panelCollapsed ? '∨' : '∧'}
+          </button>
         </div>
       )}
 

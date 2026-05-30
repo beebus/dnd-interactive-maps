@@ -95,6 +95,10 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
   const [editMode, setEditMode] = useState(false);
   const [marksVisible, setMarksVisible] = useState(true);
   const [imageScale, setImageScale] = useState(1);
+  const [naturalWidth, setNaturalWidth] = useState(1200);
+  const [distanceMode, setDistanceMode] = useState(false);
+  const [distancePath, setDistancePath] = useState<{ x: number; y: number }[]>([]);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const imgRef = React.useRef<HTMLImageElement>(null);
 
   const currentVariant = mapLocation.maps[variantIndex];
@@ -108,8 +112,10 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
   const updateImageScale = () => {
     if (imgRef.current) {
       const rect = imgRef.current.getBoundingClientRect();
-      const nativeWidth = 1200;
-      setImageScale(rect.width / nativeWidth);
+      setImageScale(rect.width / 1200);
+      if (imgRef.current.naturalWidth) {
+        setNaturalWidth(imgRef.current.naturalWidth);
+      }
     }
   };
 
@@ -119,10 +125,51 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
     return () => window.removeEventListener('resize', updateImageScale);
   }, []);
 
-  // Reset highlight when switching variants
   React.useEffect(() => {
     setHighlighted(null);
+    setDistancePath([]);
+    setDistanceMode(false);
+    setMousePos(null);
   }, [variantIndex]);
+
+  React.useEffect(() => {
+    if (!distanceMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDistanceMode(false);
+        setDistancePath([]);
+        setMousePos(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [distanceMode]);
+
+  const handleToggleDistanceMode = () => {
+    setDistanceMode(v => !v);
+    setDistancePath([]);
+    setMousePos(null);
+  };
+
+  const committedFeet = React.useMemo(() => {
+    if (distancePath.length < 2 || !currentVariant.feetPerPixel) return 0;
+    let total = 0;
+    for (let i = 1; i < distancePath.length; i++) {
+      const dx = distancePath[i].x - distancePath[i - 1].x;
+      const dy = distancePath[i].y - distancePath[i - 1].y;
+      total += Math.sqrt(dx * dx + dy * dy) * (naturalWidth / 1200) * currentVariant.feetPerPixel;
+    }
+    return total;
+  }, [distancePath, currentVariant.feetPerPixel, naturalWidth]);
+
+  const displayFeet = React.useMemo(() => {
+    if (!mousePos || distancePath.length < 1 || !currentVariant.feetPerPixel) return committedFeet;
+    const last = distancePath[distancePath.length - 1];
+    const dx = mousePos.x - last.x;
+    const dy = mousePos.y - last.y;
+    const liveDist = Math.sqrt(dx * dx + dy * dy) * (naturalWidth / 1200) * currentVariant.feetPerPixel;
+    return committedFeet + liveDist;
+  }, [committedFeet, mousePos, distancePath, currentVariant.feetPerPixel, naturalWidth]);
 
   if (loading) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Loading...</p>;
   if (error) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Error loading map data</p>;
@@ -148,6 +195,12 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
         currentVariantIndex={variantIndex}
         onSwitchVariant={setVariantIndex}
         onGoHome={() => navigate('/')}
+        distanceMode={distanceMode}
+        onToggleDistanceMode={handleToggleDistanceMode}
+        distanceFeet={displayFeet}
+        distanceWaypoints={distancePath.length}
+        isRealm={!!currentVariant.isRealm}
+        hasDistanceScale={currentVariant.feetPerPixel !== undefined}
       />
 
       <img
@@ -161,6 +214,7 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
           margin: 0,
           padding: 0,
           objectFit: 'contain',
+          cursor: distanceMode ? 'crosshair' : 'default',
         }}
         onLoad={updateImageScale}
         onMouseMove={(e) => {
@@ -168,14 +222,24 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
           const x = Math.round((e.clientX - rect.left) / imageScale);
           const y = Math.round((e.clientY - rect.top) / imageScale);
           setCoords({ x, y });
+          if (distanceMode) setMousePos({ x, y });
         }}
-        onMouseLeave={() => setCoords(null)}
+        onMouseLeave={() => {
+          setCoords(null);
+          if (distanceMode) setMousePos(null);
+        }}
         onClick={async (e) => {
-          if (!editMode) return;
-
           const rect = e.currentTarget.getBoundingClientRect();
           const x = Math.round((e.clientX - rect.left) / imageScale);
           const y = Math.round((e.clientY - rect.top) / imageScale);
+
+          if (distanceMode) {
+            setDistancePath(prev => [...prev, { x, y }]);
+            return;
+          }
+
+          if (!editMode) return;
+
           const name = prompt('Enter a name for this location:');
           if (!name) return;
 
@@ -190,6 +254,50 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
           }
         }}
       />
+
+      {distanceMode && (
+        <svg
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100%',
+            pointerEvents: 'none',
+          }}
+        >
+          {distancePath.map((pt, i) => {
+            if (i === 0) return null;
+            const prev = distancePath[i - 1];
+            return (
+              <line
+                key={i}
+                x1={prev.x * imageScale} y1={prev.y * imageScale}
+                x2={pt.x * imageScale} y2={pt.y * imageScale}
+                stroke="#2563eb" strokeWidth="3" strokeLinecap="round"
+              />
+            );
+          })}
+
+          {distancePath.length > 0 && mousePos && (
+            <line
+              x1={distancePath[distancePath.length - 1].x * imageScale}
+              y1={distancePath[distancePath.length - 1].y * imageScale}
+              x2={mousePos.x * imageScale}
+              y2={mousePos.y * imageScale}
+              stroke="#2563eb" strokeWidth="2" strokeDasharray="8,4" opacity="0.7"
+            />
+          )}
+
+          {distancePath.map((pt, i) => (
+            <circle
+              key={i}
+              cx={pt.x * imageScale} cy={pt.y * imageScale}
+              r="5" fill="#2563eb" stroke="white" strokeWidth="1.5"
+            />
+          ))}
+        </svg>
+      )}
 
       {coords && (
         <div

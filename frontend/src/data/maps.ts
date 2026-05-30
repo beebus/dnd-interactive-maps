@@ -3,6 +3,8 @@ export interface MapVariant {
   label: string;
   description: string;
   mapKey: string;
+  feetPerPixel?: number;
+  isRealm?: boolean;
 }
 
 export interface MapLocation {
@@ -26,6 +28,8 @@ export const MAP_LOCATIONS: MapLocation[] = [
         label: 'Underdark',
         description: 'The sprawling underground network of caverns and passages.',
         mapKey: 'underdark',
+        feetPerPixel: 14256,
+        isRealm: true,
       },
     ],
   },
@@ -41,12 +45,15 @@ export const MAP_LOCATIONS: MapLocation[] = [
         label: 'Elturel (Classic)',
         description: 'Elturel, capital of Elturgard, located on the River Chionthar in the Western Heartlands.',
         mapKey: 'elturel',
+        feetPerPixel: 2.92,
       },
       {
         filename: 'Elturel_2.jpg',
         label: 'Elturel in Avernus',
         description: 'Elturel chained above the River Styx after being pulled into the first layer of the Nine Hells.',
         mapKey: 'elturel_avernus',
+        feetPerPixel: 4.69,
+        isRealm: true,
       },
     ],
   },
@@ -62,12 +69,14 @@ export const MAP_LOCATIONS: MapLocation[] = [
         label: 'Candlekeep (Full)',
         description: 'The full Candlekeep complex, from the Court of Air to the innermost keep.',
         mapKey: 'candlekeep',
+        feetPerPixel: 1.11,
       },
       {
         filename: 'Candlekeep_1.jpg',
         label: 'Court of Air (Outer Ward)',
         description: 'The outer ward and gatehouse — the first area visitors encounter upon arrival.',
         mapKey: 'candlekeep_outer',
+        feetPerPixel: 0.45,
       },
     ],
   },
@@ -83,6 +92,8 @@ export const MAP_LOCATIONS: MapLocation[] = [
         label: 'Avernus',
         description: 'The full expanse of the first layer of the Nine Hells.',
         mapKey: 'avernus',
+        feetPerPixel: 243,
+        isRealm: true,
       },
     ],
   },
@@ -98,6 +109,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
         label: 'Beregost',
         description: 'The town of Beregost and its surroundings.',
         mapKey: 'beregost',
+        feetPerPixel: 0.21,
       },
     ],
   },
@@ -113,6 +125,8 @@ export const MAP_LOCATIONS: MapLocation[] = [
         label: 'Prismeer',
         description: 'The fractured Feywild domain of Prismeer.',
         mapKey: 'prismeer',
+        feetPerPixel: 134.8,
+        isRealm: true,
       },
     ],
   },

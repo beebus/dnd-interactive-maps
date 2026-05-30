@@ -20,12 +20,13 @@ const mockMapLocation: MapLocation = {
   ],
 };
 
-function renderSearchBar(editMode = false, marksVisible = true) {
+function renderSearchBar(editMode = false, marksVisible = true, distanceMode = false) {
   const onSelectLocation = vi.fn();
   const setEditMode = vi.fn();
   const onSwitchVariant = vi.fn();
   const onGoHome = vi.fn();
   const onToggleMarks = vi.fn();
+  const onToggleDistanceMode = vi.fn();
   render(
     <SearchBar
       locations={mockLocations}
@@ -38,9 +39,15 @@ function renderSearchBar(editMode = false, marksVisible = true) {
       currentVariantIndex={0}
       onSwitchVariant={onSwitchVariant}
       onGoHome={onGoHome}
+      distanceMode={distanceMode}
+      onToggleDistanceMode={onToggleDistanceMode}
+      distanceFeet={0}
+      distanceWaypoints={0}
+      isRealm={false}
+      hasDistanceScale={true}
     />
   );
-  return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome, onToggleMarks };
+  return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome, onToggleMarks, onToggleDistanceMode };
 }
 
 beforeEach(() => {
@@ -155,4 +162,29 @@ test('closes the menu after clicking the marks toggle item', () => {
   expect(screen.getByText('Hide all Marks')).toBeInTheDocument();
   fireEvent.click(screen.getByText('Hide all Marks'));
   expect(screen.queryByText('Hide all Marks')).not.toBeInTheDocument();
+});
+
+test('shows Distance and Time in menu when not in distance mode', () => {
+  renderSearchBar();
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Distance and Time')).toBeInTheDocument();
+});
+
+test('shows Exit Distance Mode in menu when distance mode is active', () => {
+  renderSearchBar(false, true, true);
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Exit Distance Mode')).toBeInTheDocument();
+});
+
+test('calls onToggleDistanceMode and closes menu when Distance and Time is clicked', () => {
+  const { onToggleDistanceMode } = renderSearchBar();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Distance and Time'));
+  expect(onToggleDistanceMode).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Distance and Time')).not.toBeInTheDocument();
+});
+
+test('shows starting point instruction when distance mode is active with no waypoints', () => {
+  renderSearchBar(false, true, true);
+  expect(screen.getByText('Click on the map to determine the starting point.')).toBeInTheDocument();
 });
