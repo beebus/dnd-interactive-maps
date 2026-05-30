@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './SearchBar.css';
+import { MapLocation } from '../data/maps';
 
 export interface Location {
   id: string;
@@ -14,9 +15,22 @@ interface SearchBarProps {
   onSelectLocation: (location: Location) => void;
   editMode: boolean;
   setEditMode: (value: boolean) => void;
+  mapLocation: MapLocation;
+  currentVariantIndex: number;
+  onSwitchVariant: (index: number) => void;
+  onGoHome: () => void;
 }
 
-export default function SearchBar({ locations, onSelectLocation, editMode, setEditMode }: SearchBarProps) {
+export default function SearchBar({
+  locations,
+  onSelectLocation,
+  editMode,
+  setEditMode,
+  mapLocation,
+  currentVariantIndex,
+  onSwitchVariant,
+  onGoHome,
+}: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Location[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,6 +45,8 @@ export default function SearchBar({ locations, onSelectLocation, editMode, setEd
       setResults([]);
     }
   }, [query, locations]);
+
+  const hasVariants = mapLocation.maps.length > 1;
 
   return (
     <div className="search-bar">
@@ -47,14 +63,32 @@ export default function SearchBar({ locations, onSelectLocation, editMode, setEd
 
       {menuOpen && (
         <div className="menu">
-          <div className="menu-item" onClick={() => setEditMode(!editMode)}>
+          <div className="menu-item" onClick={() => { setEditMode(!editMode); setMenuOpen(false); }}>
             {editMode ? 'Exit Edit Mode' : 'Enter Edit Mode'}
           </div>
           <div className="menu-item">Show/Hide all Marks</div>
           <div className="menu-item">Distance and Time</div>
+
+          {hasVariants && (
+            <>
+              <hr />
+              <div className="menu-section-label">Map Variants</div>
+              {mapLocation.maps.map((variant, index) => (
+                <div
+                  key={variant.mapKey}
+                  className={`menu-item${index === currentVariantIndex ? ' menu-item--active' : ''}`}
+                  onClick={() => { onSwitchVariant(index); setMenuOpen(false); }}
+                >
+                  {variant.label}
+                </div>
+              ))}
+            </>
+          )}
+
           <hr />
-          <div className="menu-item">Underdark Map</div>
-          <div className="menu-item">Elturel Map</div>
+          <div className="menu-item" onClick={() => { onGoHome(); setMenuOpen(false); }}>
+            ← All Maps
+          </div>
           <hr />
           <div className="menu-item">Send a Comment</div>
           <div className="menu-item">Information</div>
