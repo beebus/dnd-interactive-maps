@@ -18,6 +18,7 @@ interface SearchBarProps {
   editMode: boolean;
   setEditMode: (value: boolean) => void;
   marksVisible: boolean;
+  isProduction?: boolean;
   onToggleMarks: () => void;
   mapLocation: MapLocation;
   currentVariantIndex: number;
@@ -75,6 +76,7 @@ export default function SearchBar({
   distanceWaypoints,
   isRealm,
   hasDistanceScale,
+  isProduction = import.meta.env.PROD,
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Location[]>([]);
@@ -116,9 +118,11 @@ export default function SearchBar({
 
       {menuOpen && (
         <div className="menu">
-          <div className="menu-item" onClick={() => { setEditMode(!editMode); setMenuOpen(false); }}>
-            {editMode ? 'Exit Edit Mode' : 'Enter Edit Mode'}
-          </div>
+          {!isProduction && (
+            <div className="menu-item" onClick={() => { setEditMode(!editMode); setMenuOpen(false); }}>
+              {editMode ? 'Exit Edit Mode' : 'Enter Edit Mode'}
+            </div>
+          )}
           <div className="menu-item" onClick={() => { onToggleMarks(); setMenuOpen(false); }}>
             {marksVisible ? 'Hide all Marks' : 'Show all Marks'}
           </div>
