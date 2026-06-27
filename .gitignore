@@ -10,8 +10,6 @@ __pycache__/
 *.pyd
 
 # Django
-**/migrations/
-!**/migrations/__init__.py
 *.env
 *.db
 db.sqlite3
