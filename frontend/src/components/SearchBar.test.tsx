@@ -20,7 +20,7 @@ const mockMapLocation: MapLocation = {
   ],
 };
 
-function renderSearchBar(editMode = false, marksVisible = true, distanceMode = false) {
+function renderSearchBar(editMode = false, marksVisible = true, distanceMode = false, isProduction = false) {
   const onSelectLocation = vi.fn();
   const setEditMode = vi.fn();
   const onSwitchVariant = vi.fn();
@@ -45,6 +45,7 @@ function renderSearchBar(editMode = false, marksVisible = true, distanceMode = f
       distanceWaypoints={0}
       isRealm={false}
       hasDistanceScale={true}
+      isProduction={isProduction}
     />
   );
   return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome, onToggleMarks, onToggleDistanceMode };
@@ -133,6 +134,19 @@ test('calls setEditMode(false) when Exit Edit Mode is clicked', () => {
   fireEvent.click(screen.getByText('☰'));
   fireEvent.click(screen.getByText('Exit Edit Mode'));
   expect(setEditMode).toHaveBeenCalledWith(false);
+});
+
+test('hides Edit Mode option in menu when isProduction is true', () => {
+  renderSearchBar(false, true, false, true);
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.queryByText('Enter Edit Mode')).not.toBeInTheDocument();
+  expect(screen.queryByText('Exit Edit Mode')).not.toBeInTheDocument();
+});
+
+test('shows Edit Mode option in menu when isProduction is false', () => {
+  renderSearchBar(false, true, false, false);
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Enter Edit Mode')).toBeInTheDocument();
 });
 
 test('shows Hide all Marks label in menu when marksVisible is true', () => {
