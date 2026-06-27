@@ -1,0 +1,7 @@
+# Local prod simulation — overrides dev settings in docker-compose.yml.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up backend
+# Not used on AWS (ECS/EC2 runs the image directly with env vars from AWS).
+
+services:
+  backend:
+    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 2

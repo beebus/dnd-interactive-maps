@@ -1,0 +1,32 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy backend to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd dnd-interactive-maps
+            git pull origin main
+            docker stop dndmap-backend
+            docker rm dndmap-backend
+            docker build -t dndmap-backend ./backend
+            docker run -d --name dndmap-backend \
+              -p 8000:8000 \
+              --link dndmap-db:dndmap-db \
+              --env-file backend/.env \
+              dndmap-backend
+            docker exec dndmap-backend python manage.py migrate --no-input
+            docker exec dndmap-backend python manage.py collectstatic --no-input
