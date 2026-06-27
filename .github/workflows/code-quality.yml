@@ -9,7 +9,7 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Phase 1a: Scan for hardcoded secrets (TruffleHog)
       - name: Check for hardcoded secrets
