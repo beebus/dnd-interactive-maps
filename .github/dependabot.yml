@@ -23,6 +23,8 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    registries:
+      - npm-github
     ignore:
       # vite 8 is incompatible with @vitejs/plugin-react until it adds vite 8 peer support
       - dependency-name: "vite"
