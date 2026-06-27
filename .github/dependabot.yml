@@ -4,12 +4,6 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
-registries:
-  npm-github:
-    type: npm-registry
-    url: https://npm.pkg.github.com
-    token: ${{github.token}}
-
 updates:
   # Python/pip - Django backend
   - package-ecosystem: "pip"
@@ -23,8 +17,6 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
-    registries:
-      - npm-github
     ignore:
       # vite 8 is incompatible with @vitejs/plugin-react until it adds vite 8 peer support
       - dependency-name: "vite"
