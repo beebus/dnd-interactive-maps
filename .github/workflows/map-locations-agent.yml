@@ -7,11 +7,10 @@
 # Required GitHub repository secrets (Settings → Secrets and variables → Actions):
 #   ANTHROPIC_API_KEY — Anthropic API key
 #   SECRET_KEY — Django SECRET_KEY
-#   DB_NAME — postgres database name
-#   DB_USER — postgres user
-#   DB_PASSWORD — postgres password
-#   DB_HOST — set to "localhost" for CI
-#   DB_PORT — postgres port (e.g., 5432)
+#
+# The postgres database used here is a throwaway CI-only container (not the
+# production database), so its credentials are hardcoded below rather than
+# pulled from secrets.
 #
 # GITHUB_TOKEN is provided automatically by Actions — no secret needed.
 name: Map Locations Agent
@@ -41,6 +40,13 @@ permissions:
   contents: read
   issues: write
 
+env:
+  DB_NAME: ci_map_locations
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_HOST: localhost
+  DB_PORT: "5432"
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -49,13 +55,13 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ci_map_locations
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_ready
+          --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -75,22 +81,12 @@ jobs:
         working-directory: backend
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
         run: python manage.py migrate --no-input
 
       - name: Load pin fixtures
         working-directory: backend
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
         run: |
           if [ -f mapdata/fixtures/locations.json ]; then
             python manage.py loaddata mapdata/fixtures/locations.json
@@ -105,11 +101,6 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
         run: |
           MAP="${{ inputs.map || 'underdark' }}"
           THRESHOLD="${{ inputs.threshold || '0.06' }}"
