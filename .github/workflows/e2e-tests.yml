@@ -62,8 +62,8 @@ jobs:
       - name: Start backend server
         working-directory: backend
         run: |
-          nohup python manage.py runserver 0.0.0.0:8000 > backend.log 2>&1 &
-          npx --yes wait-on@8 -t 60000 http://localhost:8000/graphql/
+          nohup python manage.py runserver 0.0.0.0:8000 --noreload > backend.log 2>&1 &
+          npx --yes wait-on@8 -t 60000 -i 1000 --httpTimeout 5000 -v http-get://localhost:8000/graphql/ || (cat backend.log; exit 1)
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -73,7 +73,7 @@ jobs:
         working-directory: frontend
         run: |
           nohup npm run dev -- --host 0.0.0.0 > frontend.log 2>&1 &
-          npx --yes wait-on@8 -t 60000 http://localhost:3000
+          npx --yes wait-on@8 -t 60000 -i 1000 http://localhost:3000 || (cat frontend.log; exit 1)
 
       - name: Install e2e dependencies
         run: pip install -r e2e/requirements.txt
