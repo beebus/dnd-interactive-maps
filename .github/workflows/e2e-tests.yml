@@ -63,7 +63,7 @@ jobs:
         working-directory: backend
         run: |
           nohup python manage.py runserver 0.0.0.0:8000 --noreload > backend.log 2>&1 &
-          npx --yes wait-on@8 -t 60000 -i 1000 --httpTimeout 5000 -v http-get://localhost:8000/graphql/ || (cat backend.log; exit 1)
+          npx --yes wait-on@8 -t 60000 -i 1000 tcp:localhost:8000 || (cat backend.log; exit 1)
 
       - name: Install frontend dependencies
         working-directory: frontend
