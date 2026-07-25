@@ -10,6 +10,9 @@ updates:
     directory: "/backend"
     schedule:
       interval: "weekly"
+    groups:
+      pip-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # npm - React frontend
   - package-ecosystem: "npm"
@@ -23,6 +26,9 @@ updates:
         versions: [ ">=8" ]
       - dependency-name: "@vitejs/plugin-react"
         update-types: [ "version-update:semver-major", "version-update:semver-minor" ]
+    groups:
+      npm-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # Docker - frontend
   - package-ecosystem: "docker"
@@ -30,6 +36,9 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      docker-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # Docker - backend
   - package-ecosystem: "docker"
@@ -37,9 +46,15 @@ updates:
     directory: "/backend"
     schedule:
       interval: "weekly"
+    groups:
+      docker-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions-minor-patch:
+        update-types: [ "minor", "patch" ]
