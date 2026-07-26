@@ -238,7 +238,11 @@ class ContactViewTest(TestCase):
         self.assertIn("Love the map, thanks!", sent.body)
         self.assertEqual(sent.to, ["owner@dndmaps.test"])
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        DEFAULT_FROM_EMAIL="noreply@dndmaps.test",
+        CONTACT_EMAIL="owner@dndmaps.test",
+    )
     def test_strips_whitespace_from_submitted_fields(self):
         padded_payload = {
             "name": "  Drizzt  ",
