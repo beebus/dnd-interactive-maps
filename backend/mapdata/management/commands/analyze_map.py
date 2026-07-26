@@ -37,6 +37,7 @@ from django.core.management.base import BaseCommand
 
 GITHUB_ISSUES_API = "https://api.github.com/repos/beebus/dnd-interactive-maps/issues"
 NAME_SIMILARITY_MIN = 0.6
+SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
 
 class Command(BaseCommand):
@@ -46,7 +47,10 @@ class Command(BaseCommand):
         parser.add_argument(
             "--map",
             default="underdark",
-            help="Map slug to analyze (must match the Location.map field and the image filename)",
+            help=(
+                "Map key to analyze (must match the Location.map field and a key in "
+                "frontend/public/maps/manifest.json)"
+            ),
         )
         parser.add_argument(
             "--threshold",
@@ -78,7 +82,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--image-path",
-            help="Override the path to the map image (JPEG)",
+            help="Override the path to the map image (JPEG, PNG, or WEBP)",
         )
 
     def handle(self, *args, **options):
@@ -95,7 +99,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(f"Map image : {image_path}")
-        native_w, native_h = self._jpeg_dimensions(image_path)
+        native_w, native_h = self._image_dimensions(image_path)
         self.stdout.write(f"Dimensions: {native_w}×{native_h} px (native)")
 
         display_w = options["display_width"] or native_w
@@ -136,15 +140,49 @@ class Command(BaseCommand):
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def _resolve_image(override, map_name):
+    def _load_manifest(manifest_path: Path) -> dict[str, str]:
+        """Load the mapKey -> filename manifest (shared with the frontend, single source
+        of truth at frontend/src/data/mapManifest.json). Returns {} if no manifest is
+        present at the given path."""
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+
+    @classmethod
+    def _resolve_image(cls, override, map_name):
         if override:
             return Path(override)
-        # Inside Docker the map volume is mounted at /maps.
-        # Outside Docker (local dev) falls back to the repo-relative path.
-        docker_path = Path("/maps") / f"{map_name}.jpg"
-        if docker_path.exists():
-            return docker_path
+        # Inside Docker the map volume is mounted at /maps, and the manifest is bind-mounted
+        # separately at /map-manifest.json (see docker-compose.yml) since it can't be nested
+        # inside the read-only /maps mount. Outside Docker (local dev) falls back to the
+        # repo-relative paths.
         root = Path(__file__).resolve().parents[4]
+        image_dirs = (Path("/maps"), root / "frontend" / "public" / "maps")
+        manifest_paths = (
+            Path("/map-manifest.json"),
+            root / "frontend" / "src" / "data" / "mapManifest.json",
+        )
+
+        # Preferred: look up the real filename from the manifest (since map keys don't
+        # mechanically correspond to filenames, e.g. "candlekeep" -> "Candlekeep_2.jpg").
+        for manifest_path in manifest_paths:
+            filename = cls._load_manifest(manifest_path).get(map_name)
+            if filename:
+                for image_dir in image_dirs:
+                    candidate = image_dir / filename
+                    if candidate.exists():
+                        return candidate
+
+        # Fallback for a map key not yet catalogued in the manifest: guess the filename
+        # directly from the map key across supported extensions.
+        for image_dir in image_dirs:
+            for ext in SUPPORTED_EXTENSIONS:
+                candidate = image_dir / f"{map_name}{ext}"
+                if candidate.exists():
+                    return candidate
+
         return root / "frontend" / "public" / "maps" / f"{map_name}.jpg"
 
     @staticmethod
@@ -166,6 +204,50 @@ class Command(BaseCommand):
         raise ValueError(f"Cannot read JPEG dimensions from {path}")
 
     @staticmethod
+    def _png_dimensions(path: Union[str, Path]) -> tuple[int, int]:
+        """Read width/height from the PNG IHDR chunk (always the first chunk)."""
+        with open(path, "rb") as f:
+            header = f.read(24)
+        w, h = struct.unpack(">II", header[16:24])
+        return w, h
+
+    @staticmethod
+    def _webp_dimensions(path: Union[str, Path]) -> tuple[int, int]:
+        """Read width/height from a WEBP file (VP8 lossy, VP8L lossless, or VP8X extended)."""
+        with open(path, "rb") as f:
+            data = f.read(30)
+        chunk = data[12:16]
+        if chunk == b"VP8X":
+            w = int.from_bytes(data[24:27], "little") + 1
+            h = int.from_bytes(data[27:30], "little") + 1
+            return w, h
+        if chunk == b"VP8L":
+            bits = int.from_bytes(data[21:25], "little")
+            w = (bits & 0x3FFF) + 1
+            h = ((bits >> 14) & 0x3FFF) + 1
+            return w, h
+        if chunk == b"VP8 ":
+            if data[23:26] != b"\x9d\x01\x2a":
+                raise ValueError(f"Cannot read WEBP dimensions from {path}: bad VP8 start code")
+            w = struct.unpack("<H", data[26:28])[0] & 0x3FFF
+            h = struct.unpack("<H", data[28:30])[0] & 0x3FFF
+            return w, h
+        raise ValueError(f"Cannot read WEBP dimensions from {path}: unrecognised chunk {chunk!r}")
+
+    @classmethod
+    def _image_dimensions(cls, path: Union[str, Path]) -> tuple[int, int]:
+        """Detect the image format from its magic bytes and return (width, height)."""
+        with open(path, "rb") as f:
+            magic = f.read(12)
+        if magic[:2] == b"\xff\xd8":
+            return cls._jpeg_dimensions(path)
+        if magic[:8] == b"\x89PNG\r\n\x1a\n":
+            return cls._png_dimensions(path)
+        if magic[:4] == b"RIFF" and magic[8:12] == b"WEBP":
+            return cls._webp_dimensions(path)
+        raise ValueError(f"Unsupported image format for {path} (expected JPEG, PNG, or WEBP)")
+
+    @staticmethod
     def _vision_extract(client, image_path, img_w, img_h):
         """Send the map image to Claude and return a list of {name, x, y} dicts
         where x and y are already normalized to [0, 1]."""
@@ -173,7 +255,14 @@ class Command(BaseCommand):
             b64_data = base64.standard_b64encode(f.read()).decode()
 
         ext = image_path.suffix.lower()
-        media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png"
+        media_type = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+        }.get(ext)
+        if media_type is None:
+            raise ValueError(f"Unsupported image extension {ext!r} for {image_path}")
 
         prompt = (
             f"This is a D&D fantasy map image ({img_w}×{img_h} pixels). "

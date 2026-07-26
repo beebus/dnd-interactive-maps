@@ -1,3 +1,5 @@
+import mapManifest from './mapManifest.json';
+
 export interface MapVariant {
   filename: string;
   label: string;
@@ -15,6 +17,9 @@ export interface MapLocation {
   maps: MapVariant[];
 }
 
+// Each variant's `filename` is looked up from manifest.json (keyed by mapKey) so the
+// frontend and the backend's analyze_map command share one source of truth for which
+// image file backs a given map key — see backend/mapdata/management/commands/analyze_map.py.
 export const MAP_LOCATIONS: MapLocation[] = [
   {
     slug: 'underdark',
@@ -24,7 +29,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tags: ['Underground', 'Faerûn', 'Out of the Abyss'],
     maps: [
       {
-        filename: 'Underdark_1.jpg',
+        filename: mapManifest.underdark,
         label: 'Underdark',
         description: 'The sprawling underground network of caverns and passages.',
         mapKey: 'underdark',
@@ -41,14 +46,14 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tags: ['City', 'Faerûn', 'Sword Coast'],
     maps: [
       {
-        filename: 'Elturel_1.png',
+        filename: mapManifest.elturel,
         label: 'Elturel (Classic)',
         description: 'Elturel, capital of Elturgard, located on the River Chionthar in the Western Heartlands.',
         mapKey: 'elturel',
         feetPerPixel: 2.92,
       },
       {
-        filename: 'Elturel_2.jpg',
+        filename: mapManifest.elturel_avernus,
         label: 'Elturel in Avernus',
         description: 'Elturel chained above the River Styx after being pulled into the first layer of the Nine Hells.',
         mapKey: 'elturel_avernus',
@@ -65,14 +70,14 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tags: ['Library', 'Sword Coast', 'Faerûn'],
     maps: [
       {
-        filename: 'Candlekeep_2.jpg',
+        filename: mapManifest.candlekeep,
         label: 'Candlekeep (Full)',
         description: 'The full Candlekeep complex, from the Court of Air to the innermost keep.',
         mapKey: 'candlekeep',
         feetPerPixel: 1.11,
       },
       {
-        filename: 'Candlekeep_1.jpg',
+        filename: mapManifest.candlekeep_outer,
         label: 'Court of Air (Outer Ward)',
         description: 'The outer ward and gatehouse — the first area visitors encounter upon arrival.',
         mapKey: 'candlekeep_outer',
@@ -88,7 +93,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tags: ['Nine Hells', 'Outer Planes', 'Avernus'],
     maps: [
       {
-        filename: 'Avernus.jpg',
+        filename: mapManifest.avernus,
         label: 'Avernus',
         description: 'The full expanse of the first layer of the Nine Hells.',
         mapKey: 'avernus',
@@ -105,7 +110,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tags: ['Town', 'Sword Coast', 'Faerûn'],
     maps: [
       {
-        filename: 'Beregost_1.webp',
+        filename: mapManifest.beregost,
         label: 'Beregost',
         description: 'The town of Beregost and its surroundings.',
         mapKey: 'beregost',
@@ -121,7 +126,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tags: ['Feywild', 'Outer Planes', 'Wild Beyond the Witchlight'],
     maps: [
       {
-        filename: 'Prismeer_1.webp',
+        filename: mapManifest.prismeer,
         label: 'Prismeer',
         description: 'The fractured Feywild domain of Prismeer.',
         mapKey: 'prismeer',
