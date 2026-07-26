@@ -1,7 +1,7 @@
 import { gql, TypedDocumentNode } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import SearchBar, { Location as SearchLocation } from '../components/SearchBar';
 import { getMapLocation, MapLocation } from '../data/maps';
 
