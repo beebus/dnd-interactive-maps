@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@apollo/client/react';
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import SearchBar, { Location as SearchLocation } from '../components/SearchBar';
+import PinEditModal from '../components/PinEditModal';
 import { getMapLocation, MapLocation } from '../data/maps';
 
 interface Poi {
@@ -16,6 +17,35 @@ interface LocationData {
   x: number;
   y: number;
   pois: Poi[];
+}
+
+interface UpdateLocationData {
+  updateLocation: {
+    location: {
+      id: string;
+      name: string;
+      x: number;
+      y: number;
+    };
+  };
+}
+
+interface UpdateLocationVariables {
+  id: string;
+  name?: string;
+  x?: number;
+  y?: number;
+}
+
+interface DeleteLocationData {
+  deleteLocation: {
+    success: boolean;
+    deletedId: string;
+  };
+}
+
+interface DeleteLocationVariables {
+  id: string;
 }
 
 interface GetLocationsData {
@@ -47,6 +77,7 @@ interface CreateLocationVariables {
 const GET_LOCATIONS: TypedDocumentNode<GetLocationsData, GetLocationsVariables> = gql`
   query GetLocations($mapName: String!) {
     allLocations(mapName: $mapName) {
+      id
       name
       x
       y
@@ -67,6 +98,28 @@ const CREATE_LOCATION: TypedDocumentNode<CreateLocationData, CreateLocationVaria
         x
         y
       }
+    }
+  }
+`;
+
+const UPDATE_LOCATION: TypedDocumentNode<UpdateLocationData, UpdateLocationVariables> = gql`
+  mutation UpdateLocation($id: ID!, $name: String, $x: Float, $y: Float) {
+    updateLocation(id: $id, name: $name, x: $x, y: $y) {
+      location {
+        id
+        name
+        x
+        y
+      }
+    }
+  }
+`;
+
+const DELETE_LOCATION: TypedDocumentNode<DeleteLocationData, DeleteLocationVariables> = gql`
+  mutation DeleteLocation($id: ID!) {
+    deleteLocation(id: $id) {
+      success
+      deletedId
     }
   }
 `;
@@ -108,6 +161,67 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
   });
 
   const [createLocation] = useMutation(CREATE_LOCATION);
+  const [updateLocation] = useMutation(UPDATE_LOCATION);
+  const [deleteLocation] = useMutation(DELETE_LOCATION);
+  const [editingLocation, setEditingLocation] = useState<LocationData | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const dragStartRef = React.useRef<{ id: string; startClientX: number; startClientY: number } | null>(null);
+
+  async function handleRenameLocation(id: string, name: string) {
+    await updateLocation({ variables: { id, name } });
+    await refetch();
+  }
+
+  async function handleDeleteLocation(id: string) {
+    await deleteLocation({ variables: { id } });
+    await refetch();
+  }
+
+  React.useEffect(() => {
+    if (!draggingId) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!imgRef.current) return;
+      const rect = imgRef.current.getBoundingClientRect();
+      const x = Math.round((e.clientX - rect.left) / imageScale);
+      const y = Math.round((e.clientY - rect.top) / imageScale);
+      setDragPos({ x, y });
+    };
+
+    const handleMouseUp = async (e: MouseEvent) => {
+      const start = dragStartRef.current;
+      setDraggingId(null);
+      setDragPos(null);
+      if (!start || !imgRef.current) return;
+
+      const movedDistance = Math.hypot(e.clientX - start.startClientX, e.clientY - start.startClientY);
+      if (movedDistance < 4) {
+        const full = data?.allLocations.find(l => l.id === start.id);
+        if (full) setEditingLocation(full);
+        return;
+      }
+
+      const rect = imgRef.current.getBoundingClientRect();
+      const x = Math.round((e.clientX - rect.left) / imageScale);
+      const y = Math.round((e.clientY - rect.top) / imageScale);
+
+      try {
+        await updateLocation({ variables: { id: start.id, x, y } });
+        await refetch();
+      } catch (err) {
+        alert('Failed to reposition location.');
+        console.error(err);
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingId, imageScale, data, updateLocation, refetch]);
 
   const updateImageScale = () => {
     if (imgRef.current) {
@@ -175,7 +289,7 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
   if (error) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Error loading map data</p>;
 
   const locations: SearchLocation[] = (data?.allLocations ?? []).map((loc) => ({
-    id: loc.name,
+    id: loc.id,
     name: loc.name,
     x: loc.x,
     y: loc.y,
@@ -317,25 +431,48 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
         </div>
       )}
 
-      {marksVisible && (highlighted ? [highlighted] : locations).map((loc) => (
-        <div
-          key={loc.name}
-          style={{
-            position: 'absolute',
-            top: `${loc.y * imageScale}px`,
-            left: `${loc.x * imageScale}px`,
-            transform: 'translate(-50%, -50%)',
-            cursor: 'pointer',
-            fontSize: highlighted?.name === loc.name ? '24px' : '18px',
-            color: highlighted?.name === loc.name ? 'red' : 'black',
-            zIndex: highlighted?.name === loc.name ? 1000 : 500,
-          }}
-          title={loc.name}
-          onClick={() => alert(`${loc.name}\n${loc.description}`)}
-        >
-          📍
-        </div>
-      ))}
+      {marksVisible && (highlighted ? [highlighted] : locations).map((loc) => {
+        const isDragging = draggingId === loc.id;
+        const pos = isDragging && dragPos ? dragPos : { x: loc.x, y: loc.y };
+        return (
+          <div
+            key={loc.id}
+            style={{
+              position: 'absolute',
+              top: `${pos.y * imageScale}px`,
+              left: `${pos.x * imageScale}px`,
+              transform: 'translate(-50%, -50%)',
+              cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+              fontSize: highlighted?.name === loc.name ? '24px' : '18px',
+              color: highlighted?.name === loc.name ? 'red' : 'black',
+              zIndex: highlighted?.name === loc.name ? 1000 : 500,
+            }}
+            title={loc.name}
+            onMouseDown={(e) => {
+              if (!editMode) return;
+              e.preventDefault();
+              dragStartRef.current = { id: loc.id, startClientX: e.clientX, startClientY: e.clientY };
+              setDraggingId(loc.id);
+              setDragPos({ x: loc.x, y: loc.y });
+            }}
+            onClick={() => {
+              if (editMode) return;
+              alert(`${loc.name}\n${loc.description}`);
+            }}
+          >
+            📍
+          </div>
+        );
+      })}
+
+      {editingLocation && (
+        <PinEditModal
+          location={editingLocation}
+          onClose={() => setEditingLocation(null)}
+          onRename={handleRenameLocation}
+          onDelete={handleDeleteLocation}
+        />
+      )}
     </div>
   );
 }

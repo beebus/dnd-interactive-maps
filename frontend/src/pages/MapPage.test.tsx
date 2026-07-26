@@ -11,8 +11,8 @@ vi.mock('@apollo/client/react', () => ({
 }));
 
 const mockLocations = [
-  { name: 'Menzoberranzan', x: 195, y: 50, pois: [] },
-  { name: 'Blingdenstone', x: 180, y: 62, pois: [{ title: 'Gem Market', description: 'A trading hub' }] },
+  { id: '1', name: 'Menzoberranzan', x: 195, y: 50, pois: [] },
+  { id: '2', name: 'Blingdenstone', x: 180, y: 62, pois: [{ title: 'Gem Market', description: 'A trading hub' }] },
 ];
 
 function renderMapPage(slug = 'underdark') {
@@ -28,20 +28,34 @@ function renderMapPage(slug = 'underdark') {
 
 let refetchMock: ReturnType<typeof vi.fn>;
 let createLocationMock: ReturnType<typeof vi.fn>;
+let updateLocationMock: ReturnType<typeof vi.fn>;
+let deleteLocationMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   refetchMock = vi.fn();
   createLocationMock = vi.fn().mockResolvedValue({});
+  updateLocationMock = vi.fn().mockResolvedValue({});
+  deleteLocationMock = vi.fn().mockResolvedValue({});
   vi.mocked(useQuery).mockReturnValue({
     data: { allLocations: mockLocations },
     loading: false,
     error: undefined,
     refetch: refetchMock,
   } as any);
-  vi.mocked(useMutation).mockReturnValue([createLocationMock, {} as any]);
+  // MapPageInner calls useMutation 3 times per render, always in the same order
+  // (create, update, delete) — cycle through the three mocks by call index so
+  // this stays correct across re-renders, not just the first one.
+  const mutationMocks = [createLocationMock, updateLocationMock, deleteLocationMock];
+  let mutationCallIndex = 0;
+  vi.mocked(useMutation).mockImplementation(() => {
+    const mock = mutationMocks[mutationCallIndex % mutationMocks.length];
+    mutationCallIndex++;
+    return [mock, {} as any];
+  });
   window.alert = vi.fn();
   window.prompt = vi.fn();
+  window.confirm = vi.fn();
 
   Object.defineProperty(HTMLImageElement.prototype, 'getBoundingClientRect', {
     configurable: true,
@@ -236,4 +250,102 @@ test('navigates home when Return to Maps is clicked on the NotFound page', () =>
   renderMapPage('not-a-real-map');
   fireEvent.click(screen.getByText('Return to Maps'));
   expect(screen.getByText('Home')).toBeInTheDocument();
+});
+
+function enterEditModeAndClickPin(title = 'Blingdenstone') {
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Enter Edit Mode'));
+  const pin = screen.getByTitle(title);
+  fireEvent.mouseDown(pin, { clientX: 100, clientY: 100 });
+  fireEvent.mouseUp(document, { clientX: 100, clientY: 100 });
+}
+
+test('opens the edit modal instead of an alert when a pin is clicked in edit mode', () => {
+  renderMapPage();
+  enterEditModeAndClickPin();
+  expect(window.alert).not.toHaveBeenCalled();
+  expect(screen.getByText('Edit Location')).toBeInTheDocument();
+  expect(screen.getByLabelText('Name')).toHaveValue('Blingdenstone');
+});
+
+test('still shows the read-only alert when a pin is clicked outside edit mode', () => {
+  renderMapPage();
+  fireEvent.click(screen.getByTitle('Blingdenstone'));
+  expect(window.alert).toHaveBeenCalledWith('Blingdenstone\nGem Market: A trading hub');
+  expect(screen.queryByText('Edit Location')).not.toBeInTheDocument();
+});
+
+test('renames a location via the edit modal', async () => {
+  renderMapPage();
+  enterEditModeAndClickPin();
+
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Name' } });
+  fireEvent.click(screen.getByText('Save'));
+
+  await waitFor(() => {
+    expect(updateLocationMock).toHaveBeenCalledWith({ variables: { id: '2', name: 'New Name' } });
+  });
+  expect(refetchMock).toHaveBeenCalled();
+  expect(screen.queryByText('Edit Location')).not.toBeInTheDocument();
+});
+
+test('deletes a location via the edit modal when the confirm dialog is accepted', async () => {
+  vi.mocked(window.confirm).mockReturnValue(true);
+  renderMapPage();
+  enterEditModeAndClickPin();
+
+  fireEvent.click(screen.getByText('Delete'));
+
+  expect(window.confirm).toHaveBeenCalledWith(
+    'Delete "Blingdenstone"? This will also remove 1 linked point(s) of interest.'
+  );
+  await waitFor(() => {
+    expect(deleteLocationMock).toHaveBeenCalledWith({ variables: { id: '2' } });
+  });
+  expect(refetchMock).toHaveBeenCalled();
+});
+
+test('does not delete a location when the confirm dialog is cancelled', () => {
+  vi.mocked(window.confirm).mockReturnValue(false);
+  renderMapPage();
+  enterEditModeAndClickPin();
+
+  fireEvent.click(screen.getByText('Delete'));
+
+  expect(deleteLocationMock).not.toHaveBeenCalled();
+});
+
+test('repositions a location by dragging its pin in edit mode', async () => {
+  renderMapPage();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Enter Edit Mode'));
+
+  const pin = screen.getByTitle('Blingdenstone');
+  fireEvent.mouseDown(pin, { clientX: 100, clientY: 100 });
+  fireEvent.mouseMove(document, { clientX: 150, clientY: 140 });
+  fireEvent.mouseUp(document, { clientX: 150, clientY: 140 });
+
+  await waitFor(() => {
+    expect(updateLocationMock).toHaveBeenCalledWith({ variables: { id: '2', x: 150, y: 140 } });
+  });
+  expect(refetchMock).toHaveBeenCalled();
+  expect(screen.queryByText('Edit Location')).not.toBeInTheDocument();
+});
+
+test('alerts when repositioning a location fails', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  updateLocationMock.mockRejectedValueOnce(new Error('boom'));
+  renderMapPage();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Enter Edit Mode'));
+
+  const pin = screen.getByTitle('Blingdenstone');
+  fireEvent.mouseDown(pin, { clientX: 100, clientY: 100 });
+  fireEvent.mouseMove(document, { clientX: 150, clientY: 140 });
+  fireEvent.mouseUp(document, { clientX: 150, clientY: 140 });
+
+  await waitFor(() => {
+    expect(window.alert).toHaveBeenCalledWith('Failed to reposition location.');
+  });
+  expect(refetchMock).not.toHaveBeenCalled();
 });

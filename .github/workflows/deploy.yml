@@ -29,4 +29,5 @@ jobs:
               --env-file backend/.env \
               dndmap-backend
             docker exec dndmap-backend python manage.py migrate --no-input
+            docker exec dndmap-backend python manage.py sync_locations_fixture
             docker exec dndmap-backend python manage.py collectstatic --no-input

@@ -137,6 +137,34 @@
   cursor: not-allowed;
 }
 
+.modal-delete {
+  margin-top: 4px;
+  margin-left: 12px;
+  padding: 10px 24px;
+  background: #c62828;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modal-delete:hover:not(:disabled) {
+  background: #8e1b1b;
+}
+
+.modal-delete:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+}
+
 /* Information modal */
 .info-section {
   margin-bottom: 24px;
