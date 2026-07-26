@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from django.core import mail
+from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 from graphene_django.utils.testing import GraphQLTestCase
 
@@ -149,6 +150,7 @@ class GraphQLLocationTest(GraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(response.json()["data"]["allLocations"], [])
 
+    @override_settings(DEBUG=True)
     def test_create_location_mutation(self):
         response = self.query(
             """
@@ -169,6 +171,126 @@ class GraphQLLocationTest(GraphQLTestCase):
         self.assertEqual(location["x"], 180.0)
         self.assertEqual(location["y"], 62.0)
         self.assertTrue(Location.objects.filter(name="Blingdenstone").exists())
+
+    @override_settings(DEBUG=True)
+    def test_update_location_mutation(self):
+        loc = Location.objects.get(name="Menzoberranzan")
+        response = self.query(
+            """
+            mutation($id: ID!) {
+                updateLocation(id: $id, name: "Blingdenstone", x: 180.0, y: 62.0) {
+                    location {
+                        name
+                        x
+                        y
+                    }
+                }
+            }
+            """,
+            variables={"id": loc.id},
+        )
+        self.assertResponseNoErrors(response)
+        location = response.json()["data"]["updateLocation"]["location"]
+        self.assertEqual(location["name"], "Blingdenstone")
+        self.assertEqual(location["x"], 180.0)
+        self.assertEqual(location["y"], 62.0)
+        loc.refresh_from_db()
+        self.assertEqual(loc.name, "Blingdenstone")
+        self.assertEqual(loc.x, 180.0)
+        self.assertEqual(loc.y, 62.0)
+
+    @override_settings(DEBUG=True)
+    def test_update_location_not_found_returns_error(self):
+        response = self.query(
+            """
+            mutation {
+                updateLocation(id: "999999", name: "Nowhere") {
+                    location {
+                        name
+                    }
+                }
+            }
+            """
+        )
+        self.assertResponseHasErrors(response)
+
+    @override_settings(DEBUG=True)
+    def test_delete_location_mutation(self):
+        loc = Location.objects.get(name="Menzoberranzan")
+        PointOfInterest.objects.create(location=loc, title="Bazaar", description="A market.")
+        response = self.query(
+            """
+            mutation($id: ID!) {
+                deleteLocation(id: $id) {
+                    success
+                    deletedId
+                }
+            }
+            """,
+            variables={"id": loc.id},
+        )
+        self.assertResponseNoErrors(response)
+        data = response.json()["data"]["deleteLocation"]
+        self.assertTrue(data["success"])
+        self.assertEqual(str(data["deletedId"]), str(loc.id))
+        self.assertFalse(Location.objects.filter(pk=loc.id).exists())
+        self.assertFalse(PointOfInterest.objects.filter(location_id=loc.id).exists())
+
+    @override_settings(DEBUG=True)
+    def test_delete_location_not_found_returns_error(self):
+        response = self.query(
+            """
+            mutation {
+                deleteLocation(id: "999999") {
+                    success
+                }
+            }
+            """
+        )
+        self.assertResponseHasErrors(response)
+
+    @override_settings(DEBUG=False)
+    def test_mutations_rejected_when_debug_false(self):
+        loc = Location.objects.get(name="Menzoberranzan")
+
+        create_response = self.query(
+            """
+            mutation {
+                createLocation(name: "ShouldNotExist", x: 1.0, y: 1.0, mapName: "underdark") {
+                    location { name }
+                }
+            }
+            """
+        )
+        self.assertResponseHasErrors(create_response)
+        self.assertFalse(Location.objects.filter(name="ShouldNotExist").exists())
+
+        update_response = self.query(
+            """
+            mutation($id: ID!) {
+                updateLocation(id: $id, name: "ShouldNotChange") {
+                    location { name }
+                }
+            }
+            """,
+            variables={"id": loc.id},
+        )
+        self.assertResponseHasErrors(update_response)
+        loc.refresh_from_db()
+        self.assertEqual(loc.name, "Menzoberranzan")
+
+        delete_response = self.query(
+            """
+            mutation($id: ID!) {
+                deleteLocation(id: $id) {
+                    success
+                }
+            }
+            """,
+            variables={"id": loc.id},
+        )
+        self.assertResponseHasErrors(delete_response)
+        self.assertTrue(Location.objects.filter(pk=loc.id).exists())
 
 
 # ---------------------------------------------------------------------------
@@ -549,3 +671,20 @@ class AnalyzeMapCreatePinsTest(TestCase):
         self.assertIn({"name": "Menzoberranzan", "x": 250, "y": 400, "map": "underdark"}, call_kwargs)
         self.assertIn({"name": "Blingdenstone", "x": 100, "y": 720, "map": "underdark"}, call_kwargs)
         self.assertIn("Created 2 new pin(s)", buf.getvalue())
+
+
+# ---------------------------------------------------------------------------
+# sync_locations_fixture
+# ---------------------------------------------------------------------------
+
+class SyncLocationsFixtureTest(TestCase):
+    def test_replaces_location_table_with_fixture_contents(self):
+        Location.objects.create(name="Not In Fixture", x=1, y=1, map="underdark")
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            call_command("sync_locations_fixture")
+
+        self.assertFalse(Location.objects.filter(name="Not In Fixture").exists())
+        self.assertTrue(Location.objects.filter(name="Menzoberranzan", map="underdark").exists())
+        self.assertIn("Location table replaced from fixture", buf.getvalue())

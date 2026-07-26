@@ -994,9 +994,29 @@
   "pk": 318,
   "fields": {
     "name": "The Darkgulf",
-    "x": 700.0,
-    "y": 760.0,
+    "x": 866.0,
+    "y": 767.0,
     "map": "underdark"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 319,
+  "fields": {
+    "name": "The Garden",
+    "x": 532.0,
+    "y": 304.0,
+    "map": "elturel"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 320,
+  "fields": {
+    "name": "Pillar of Pedagogy",
+    "x": 838.0,
+    "y": 283.0,
+    "map": "candlekeep"
   }
 }
 ]

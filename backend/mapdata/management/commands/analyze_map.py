@@ -395,8 +395,10 @@ class Command(BaseCommand):
         )
         self.stdout.write(
             "Run the following to export them to the fixture file:\n"
-            "  docker compose exec backend python manage.py dump-data mapdata.location "
-            "--indent 2 > backend/mapdata/fixtures/locations.json"
+            "  docker compose exec backend python manage.py dumpdata mapdata.location "
+            "--indent 2 --output mapdata/fixtures/locations.json\n"
+            "(Use --output rather than shell '>' redirection — PowerShell's '>' writes "
+            "UTF-16, which Django's loaddata cannot read.)"
         )
 
     def _post_issues(self, client, missing, mismatched, map_name):
