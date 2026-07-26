@@ -84,10 +84,24 @@ cd frontend
 npm test
 ```
 
+To run frontend tests with coverage (Vitest):
+```
+cd frontend
+npm run test:coverage
+```
+This prints a per-file coverage table and writes an HTML report to `frontend/coverage/index.html`.
+
 ### Backend Tests
 To run backend tests (Django with PostgreSQL):
 1. Ensure the app is running: `docker-compose up --build`
 2. Run tests: `docker-compose exec backend python manage.py test`
+
+To run backend tests with coverage:
+1. Ensure the app is running: `docker compose up -d db backend`
+2. Install test-only dependencies: `docker compose exec backend pip install -r requirements-dev.txt`
+3. Run tests with coverage: `docker compose exec backend sh -c "coverage run manage.py test && coverage report && coverage html -d coverage_html"`
+
+This prints a per-file coverage table and writes an HTML report to `backend/coverage_html/index.html`.
 
 ## 🤖 Map Locations Agent
 

@@ -22,7 +22,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "browserslist": {
     "production": [
@@ -47,6 +48,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.1",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vitest/ui": "^4.1.7",
     "jsdom": "^29.1.1",
     "vite": "^7.3.6",

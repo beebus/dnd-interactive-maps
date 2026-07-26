@@ -53,6 +53,9 @@ backend/venv/
 # Coverage / testing
 htmlcov/
 .coverage
+coverage.xml
+backend/coverage_html/
+frontend/coverage/
 .tox/
 .cache/
 pytest_cache/

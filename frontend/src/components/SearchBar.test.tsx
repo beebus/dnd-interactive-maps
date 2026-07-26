@@ -202,3 +202,163 @@ test('shows starting point instruction when distance mode is active with no wayp
   renderSearchBar(false, true, true);
   expect(screen.getByText('Click on the map to determine the starting point.')).toBeInTheDocument();
 });
+
+const mockMapLocationMultiVariant: MapLocation = {
+  slug: 'elturel',
+  name: 'Elturel',
+  description: 'A holy city.',
+  tags: ['City'],
+  maps: [
+    { filename: 'Elturel_1.png', label: 'Elturel (Classic)', description: '', mapKey: 'elturel' },
+    { filename: 'Elturel_2.jpg', label: 'Elturel in Avernus', description: '', mapKey: 'elturel_avernus' },
+  ],
+};
+
+function renderSearchBarFull(overrides: Partial<React.ComponentProps<typeof SearchBar>> = {}) {
+  const onSelectLocation = vi.fn();
+  const setEditMode = vi.fn();
+  const onSwitchVariant = vi.fn();
+  const onGoHome = vi.fn();
+  const onToggleMarks = vi.fn();
+  const onToggleDistanceMode = vi.fn();
+  render(
+    <SearchBar
+      locations={mockLocations}
+      onSelectLocation={onSelectLocation}
+      editMode={false}
+      setEditMode={setEditMode}
+      marksVisible={true}
+      onToggleMarks={onToggleMarks}
+      mapLocation={mockMapLocation}
+      currentVariantIndex={0}
+      onSwitchVariant={onSwitchVariant}
+      onGoHome={onGoHome}
+      distanceMode={false}
+      onToggleDistanceMode={onToggleDistanceMode}
+      distanceFeet={0}
+      distanceWaypoints={0}
+      isRealm={false}
+      hasDistanceScale={true}
+      isProduction={false}
+      {...overrides}
+    />
+  );
+  return { onSelectLocation, setEditMode, onSwitchVariant, onGoHome, onToggleMarks, onToggleDistanceMode };
+}
+
+test('shows destination instruction when one waypoint has been placed', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1 });
+  expect(screen.getByText('Click on the map to determine the destination.')).toBeInTheDocument();
+});
+
+test('shows the keep-drawing instruction once two or more waypoints exist', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 2 });
+  expect(screen.getByText(/Keep drawing your path/)).toBeInTheDocument();
+  expect(screen.getByText('ESC')).toBeInTheDocument();
+});
+
+test('shows the formatted distance and travel times once a distance has been measured', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640 });
+  expect(screen.getByText('DISTANCE')).toBeInTheDocument();
+  expect(screen.getByText('2,640 ft')).toBeInTheDocument();
+  expect(screen.getByText('10 min')).toBeInTheDocument();
+});
+
+test('formats large distances in miles and days', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640000 });
+  expect(screen.getByText('500 mi')).toBeInTheDocument();
+  expect(screen.getByText('6 days 22 hr')).toBeInTheDocument();
+});
+
+test('shows a no-scale message instead of distances when the map has no scale', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640, hasDistanceScale: false });
+  expect(screen.getByText('No scale configured for this map.')).toBeInTheDocument();
+  expect(screen.queryByText('DISTANCE')).not.toBeInTheDocument();
+});
+
+test('hides city-only travel modes when isRealm is true', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640, isRealm: true });
+  expect(screen.queryByText(/Rowboat/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Keelboat/)).not.toBeInTheDocument();
+  expect(screen.getByText(/On foot \(normal\)/)).toBeInTheDocument();
+});
+
+test('shows city-only travel modes when isRealm is false', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640 });
+  expect(screen.getByText(/Rowboat/)).toBeInTheDocument();
+  expect(screen.getByText(/Keelboat/)).toBeInTheDocument();
+});
+
+test('collapses the distance panel content when the collapse button is clicked', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640 });
+  expect(screen.getByText('DISTANCE')).toBeInTheDocument();
+  fireEvent.click(screen.getByTitle('Collapse'));
+  expect(screen.queryByText('DISTANCE')).not.toBeInTheDocument();
+});
+
+test('expands the distance panel content again when clicked a second time', () => {
+  renderSearchBarFull({ distanceMode: true, distanceWaypoints: 1, distanceFeet: 2640 });
+  fireEvent.click(screen.getByTitle('Collapse'));
+  fireEvent.click(screen.getByTitle('Expand'));
+  expect(screen.getByText('DISTANCE')).toBeInTheDocument();
+});
+
+test('does not show a Map Variants section when the map has only one variant', () => {
+  renderSearchBarFull();
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.queryByText('Map Variants')).not.toBeInTheDocument();
+});
+
+test('shows a Map Variants section listing each variant when there are multiple', () => {
+  renderSearchBarFull({ mapLocation: mockMapLocationMultiVariant, currentVariantIndex: 0 });
+  fireEvent.click(screen.getByText('☰'));
+  expect(screen.getByText('Map Variants')).toBeInTheDocument();
+  expect(screen.getByText('Elturel (Classic)')).toBeInTheDocument();
+  expect(screen.getByText('Elturel in Avernus')).toBeInTheDocument();
+});
+
+test('calls onSwitchVariant with the clicked variant index and closes the menu', () => {
+  const { onSwitchVariant } = renderSearchBarFull({ mapLocation: mockMapLocationMultiVariant, currentVariantIndex: 0 });
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Elturel in Avernus'));
+  expect(onSwitchVariant).toHaveBeenCalledWith(1);
+  expect(screen.queryByText('Map Variants')).not.toBeInTheDocument();
+});
+
+test('calls onGoHome and closes the menu when All Maps is clicked', () => {
+  const { onGoHome } = renderSearchBarFull();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('← All Maps'));
+  expect(onGoHome).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('← All Maps')).not.toBeInTheDocument();
+});
+
+test('opens the Contact modal when Send a Comment is clicked', () => {
+  renderSearchBarFull();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Send a Comment'));
+  expect(screen.getByText('Have a comment, suggestion, error, or typo to report? Send it our way!')).toBeInTheDocument();
+});
+
+test('closes the Contact modal when its close button is clicked', () => {
+  renderSearchBarFull();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Send a Comment'));
+  fireEvent.click(screen.getByLabelText('Close'));
+  expect(screen.queryByText('Have a comment, suggestion, error, or typo to report? Send it our way!')).not.toBeInTheDocument();
+});
+
+test('opens the Information modal when Information is clicked', () => {
+  renderSearchBarFull();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Information'));
+  expect(screen.getByText('Travel Information')).toBeInTheDocument();
+});
+
+test('closes the Information modal when its close button is clicked', () => {
+  renderSearchBarFull();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Information'));
+  fireEvent.click(screen.getByLabelText('Close'));
+  expect(screen.queryByText('Travel Information')).not.toBeInTheDocument();
+});

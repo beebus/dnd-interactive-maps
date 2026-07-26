@@ -1,0 +1,97 @@
+# Unit Tests & Coverage
+#
+# Runs backend (Django) and frontend (Vitest) unit test suites and reports
+# code coverage. This is report-only for now: coverage is printed to the job
+# summary and uploaded as an artifact, but a low percentage does not fail the
+# build. Only actual test failures fail the job.
+name: Unit Tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-coverage:
+    runs-on: ubuntu-latest
+
+    env:
+      DB_NAME: ci_unit
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      SECRET_KEY: ci-unit-secret-key
+      DEBUG: "True"
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_DB: ci_unit
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        working-directory: backend
+        run: |
+          coverage run manage.py test
+          coverage report
+          coverage html -d coverage_html
+          coverage xml
+
+      - name: Upload backend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            backend/coverage_html
+            backend/coverage.xml
+
+  frontend-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Upload frontend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
