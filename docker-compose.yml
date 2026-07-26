@@ -20,6 +20,7 @@ services:
     volumes:
       - ./backend:/app
       - ./frontend/public/maps:/maps:ro
+      - ./frontend/src/data/mapManifest.json:/map-manifest.json:ro
     ports:
       - "8000:8000"
     environment:

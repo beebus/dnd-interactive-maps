@@ -1,6 +1,7 @@
 import io
 import json
 import smtplib
+import struct
 import tempfile
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -283,19 +284,68 @@ class AnalyzeMapResolveImageTest(TestCase):
         self.assertEqual(result, Path("/some/custom/path.jpg"))
 
     @patch("mapdata.management.commands.analyze_map.Path.exists")
-    def test_uses_docker_mount_path_when_present(self, mock_exists):
+    @patch.object(Command, "_load_manifest")
+    def test_uses_manifest_filename_from_docker_mount(self, mock_load_manifest, mock_exists):
+        mock_load_manifest.return_value = {"underdark": "Underdark_1.jpg"}
         mock_exists.return_value = True
         result = Command._resolve_image(None, "underdark")
-        self.assertEqual(result, Path("/maps/underdark.jpg"))
+        self.assertEqual(result, Path("/maps/Underdark_1.jpg"))
 
     @patch("mapdata.management.commands.analyze_map.Path.exists")
-    def test_falls_back_to_repo_relative_path_when_docker_mount_absent(self, mock_exists):
+    @patch.object(Command, "_load_manifest")
+    def test_falls_back_to_repo_relative_manifest_when_docker_manifest_lacks_key(
+        self, mock_load_manifest, mock_exists
+    ):
+        # Docker manifest doesn't have this key; repo-relative manifest does.
+        # The matching image also only exists in the repo image dir, not the docker one.
+        mock_load_manifest.side_effect = [{}, {"candlekeep_outer": "Candlekeep_1.jpg"}]
+        mock_exists.side_effect = [False, True]
+        result = Command._resolve_image(None, "candlekeep_outer")
+        self.assertEqual(
+            result,
+            Path(__file__).resolve().parents[2] / "frontend" / "public" / "maps" / "Candlekeep_1.jpg",
+        )
+
+    @patch("mapdata.management.commands.analyze_map.Path.exists")
+    @patch.object(Command, "_load_manifest")
+    def test_falls_back_to_extension_guessing_when_key_not_in_any_manifest(
+        self, mock_load_manifest, mock_exists
+    ):
+        mock_load_manifest.return_value = {}
+        # Phase 2 checks, in order: docker .jpg/.jpeg/.png/.webp, then repo .jpg/.jpeg/.png/.webp.
+        mock_exists.side_effect = [False, False, False, False, False, False, True]
+        result = Command._resolve_image(None, "underdark")
+        self.assertEqual(
+            result,
+            Path(__file__).resolve().parents[2] / "frontend" / "public" / "maps" / "underdark.png",
+        )
+
+    @patch("mapdata.management.commands.analyze_map.Path.exists")
+    @patch.object(Command, "_load_manifest")
+    def test_falls_back_to_default_jpg_guess_when_nothing_found(self, mock_load_manifest, mock_exists):
+        mock_load_manifest.return_value = {}
         mock_exists.return_value = False
         result = Command._resolve_image(None, "underdark")
         self.assertEqual(
             result,
             Path(__file__).resolve().parents[2] / "frontend" / "public" / "maps" / "underdark.jpg",
         )
+
+
+# ---------------------------------------------------------------------------
+# analyze_map._load_manifest
+# ---------------------------------------------------------------------------
+
+class AnalyzeMapLoadManifestTest(TestCase):
+    def test_reads_manifest_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manifest_path = Path(tmpdir) / "mapManifest.json"
+            manifest_path.write_text(json.dumps({"underdark": "Underdark_1.jpg"}))
+            self.assertEqual(Command._load_manifest(manifest_path), {"underdark": "Underdark_1.jpg"})
+
+    def test_returns_empty_dict_when_manifest_missing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.assertEqual(Command._load_manifest(Path(tmpdir) / "mapManifest.json"), {})
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +379,118 @@ class AnalyzeMapJpegDimensionsTest(TestCase):
             path.write_bytes(bytes([0xFF, 0xD8, 0xFF, 0xD9]))  # SOI + EOI, no SOF
             with self.assertRaises(ValueError):
                 Command._jpeg_dimensions(path)
+
+
+# ---------------------------------------------------------------------------
+# analyze_map._png_dimensions / _webp_dimensions / _image_dimensions
+# ---------------------------------------------------------------------------
+
+class AnalyzeMapPngDimensionsTest(TestCase):
+    @staticmethod
+    def _minimal_png(width: int, height: int) -> bytes:
+        return (
+            b"\x89PNG\r\n\x1a\n"
+            + struct.pack(">I", 13)
+            + b"IHDR"
+            + struct.pack(">II", width, height)
+            + bytes([0x08, 0x02, 0x00, 0x00, 0x00])
+            + b"\x00\x00\x00\x00"
+        )
+
+    def test_reads_width_and_height_from_ihdr_chunk(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.png"
+            path.write_bytes(self._minimal_png(width=800, height=600))
+            w, h = Command._png_dimensions(path)
+        self.assertEqual((w, h), (800, 600))
+
+
+class AnalyzeMapWebpDimensionsTest(TestCase):
+    @staticmethod
+    def _riff_wrap(fourcc: bytes, payload: bytes) -> bytes:
+        chunk = fourcc + struct.pack("<I", len(payload)) + payload
+        return b"RIFF" + struct.pack("<I", 4 + len(chunk)) + b"WEBP" + chunk
+
+    def test_reads_dimensions_from_vp8x_extended_chunk(self):
+        width, height = 800, 600
+        payload = (
+            b"\x00"
+            + b"\x00\x00\x00"
+            + (width - 1).to_bytes(3, "little")
+            + (height - 1).to_bytes(3, "little")
+        )
+        data = self._riff_wrap(b"VP8X", payload)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.webp"
+            path.write_bytes(data)
+            w, h = Command._webp_dimensions(path)
+        self.assertEqual((w, h), (width, height))
+
+    def test_reads_dimensions_from_vp8l_lossless_chunk(self):
+        width, height = 800, 600
+        bits = (width - 1) | ((height - 1) << 14)
+        payload = b"\x2f" + struct.pack("<I", bits)
+        data = self._riff_wrap(b"VP8L", payload)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.webp"
+            path.write_bytes(data)
+            w, h = Command._webp_dimensions(path)
+        self.assertEqual((w, h), (width, height))
+
+    def test_reads_dimensions_from_vp8_lossy_chunk(self):
+        width, height = 800, 600
+        payload = (
+            b"\x00\x00\x00"  # frame tag
+            + b"\x9d\x01\x2a"  # start code
+            + struct.pack("<H", width & 0x3FFF)
+            + struct.pack("<H", height & 0x3FFF)
+        )
+        data = self._riff_wrap(b"VP8 ", payload)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.webp"
+            path.write_bytes(data)
+            w, h = Command._webp_dimensions(path)
+        self.assertEqual((w, h), (width, height))
+
+    def test_raises_value_error_on_bad_vp8_start_code(self):
+        payload = b"\x00\x00\x00" + b"\x00\x00\x00" + b"\x00\x00\x00\x00"
+        data = self._riff_wrap(b"VP8 ", payload)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.webp"
+            path.write_bytes(data)
+            with self.assertRaises(ValueError):
+                Command._webp_dimensions(path)
+
+
+class AnalyzeMapImageDimensionsDispatchTest(TestCase):
+    def test_dispatches_jpeg_by_magic_bytes(self):
+        data = AnalyzeMapJpegDimensionsTest._minimal_sof0_jpeg(width=600, height=400)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.whatever"
+            path.write_bytes(data)
+            self.assertEqual(Command._image_dimensions(path), (600, 400))
+
+    def test_dispatches_png_by_magic_bytes(self):
+        data = AnalyzeMapPngDimensionsTest._minimal_png(width=800, height=600)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.whatever"
+            path.write_bytes(data)
+            self.assertEqual(Command._image_dimensions(path), (800, 600))
+
+    def test_dispatches_webp_by_magic_bytes(self):
+        payload = b"\x00" + b"\x00\x00\x00" + (799).to_bytes(3, "little") + (599).to_bytes(3, "little")
+        data = AnalyzeMapWebpDimensionsTest._riff_wrap(b"VP8X", payload)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.whatever"
+            path.write_bytes(data)
+            self.assertEqual(Command._image_dimensions(path), (800, 600))
+
+    def test_raises_value_error_for_unsupported_format(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test.gif"
+            path.write_bytes(b"GIF89a" + b"\x00" * 20)
+            with self.assertRaises(ValueError):
+                Command._image_dimensions(path)
 
 
 # ---------------------------------------------------------------------------
