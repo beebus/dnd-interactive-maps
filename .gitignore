@@ -28,6 +28,9 @@ frontend/.env.production.local
 .vscode/
 .idea/
 
+# Claude Code local config
+.claude/
+
 # Node.js
 node_modules/
 npm-debug.log*
