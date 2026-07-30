@@ -10,6 +10,7 @@ updates:
     directory: "/backend"
     schedule:
       interval: "weekly"
+      day: "wednesday"
     groups:
       pip-minor-patch:
         update-types: [ "minor", "patch" ]
@@ -20,6 +21,7 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+      day: "wednesday"
     ignore:
       # vite 8 is incompatible with @vitejs/plugin-react until it adds vite 8 peer support
       - dependency-name: "vite"
@@ -36,6 +38,7 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+      day: "wednesday"
     groups:
       docker-minor-patch:
         update-types: [ "minor", "patch" ]
@@ -46,6 +49,7 @@ updates:
     directory: "/backend"
     schedule:
       interval: "weekly"
+      day: "wednesday"
     groups:
       docker-minor-patch:
         update-types: [ "minor", "patch" ]
@@ -55,6 +59,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "wednesday"
     groups:
       github-actions-minor-patch:
         update-types: [ "minor", "patch" ]
