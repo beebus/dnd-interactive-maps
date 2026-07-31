@@ -13,7 +13,7 @@ def create_issue_from_finding(finding_text: str):   # renamed param → fixes "S
 
     # Ask Claude to write a good GitHub issue
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5",
         max_tokens=1024,
         stream=False,   # explicit False → eliminates Stream union warning
         messages=cast(list[MessageParam], cast(object, [
