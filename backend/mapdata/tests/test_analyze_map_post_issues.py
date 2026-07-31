@@ -20,10 +20,10 @@ class AnalyzeMapPostIssuesTest(TestCase):
         ]
 
         buf = io.StringIO()
-        with redirect_stdout(buf), patch.dict("os.environ", {"GITHUB_TOKEN": "secret-token"}):
+        with redirect_stdout(buf), patch.dict("os.environ", {"GITHUB_TOKEN": "test-token-placeholder"}):
             Command()._post_issues(client=MagicMock(), missing=missing, mismatched=mismatched, map_name="underdark")
 
         self.assertEqual(mock_post.call_count, 2)
         first_call = mock_post.call_args_list[0]
-        self.assertEqual(first_call.kwargs["headers"]["Authorization"], "token secret-token")
+        self.assertEqual(first_call.kwargs["headers"]["Authorization"], "token test-token-placeholder")
         self.assertIn("Issue created: https://github.com/example/issues/1", buf.getvalue())
