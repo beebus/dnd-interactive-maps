@@ -1,0 +1,69 @@
+# New Map Onboarding Agent
+# Given a new map image already committed to frontend/public/maps/ (and,
+# ideally, added to frontend/src/data/mapManifest.json) with no existing
+# Location pins, uses Claude's vision API to generate a first-pass fixture
+# of pins for it and opens a PR with the result for human review.
+#
+# Triggered manually via workflow_dispatch only — onboarding a new map is a
+# deliberate action, not something to run on a schedule.
+#
+# Required GitHub repository secrets (Settings → Secrets and variables → Actions):
+#   ANTHROPIC_API_KEY — Anthropic API key
+#   SECRET_KEY — Django SECRET_KEY
+#
+# GITHUB_TOKEN is provided automatically by Actions — no secret needed.
+name: New Map Onboarding Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      map:
+        description: "Map slug for the new map (must match the image filename, or a key in frontend/src/data/mapManifest.json)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DEBUG: "True"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Generate fixture entries for new map
+        working-directory: backend
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python manage.py onboard_map --map "${{ inputs.map }}"
+
+      - name: Open PR with generated fixture
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Onboard new map: ${{ inputs.map }}"
+          branch: "onboard-map/${{ inputs.map }}"
+          title: "Onboard new map: ${{ inputs.map }}"
+          body: |
+            Auto-generated first-pass pin fixture for the new map `${{ inputs.map }}`,
+            produced by Claude vision extraction (`manage.py onboard_map`).
+
+            **Review before merging** — extracted labels and coordinates are a
+            starting point, not guaranteed accurate. Check pin placement and
+            names against the map image before approving.
+          labels: map-onboarding
+          add-paths: backend/mapdata/fixtures/locations.json

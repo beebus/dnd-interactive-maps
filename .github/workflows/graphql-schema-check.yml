@@ -1,0 +1,69 @@
+# GraphQL Schema Drift Check
+#
+# Compares the live backend GraphQL schema (backend/backend/schema.py) against
+# the checked-in frontend snapshot (frontend/src/schema.graphql). The frontend
+# has no codegen step, so this snapshot — and the hand-written Apollo query/
+# mutation types in frontend/src/pages/MapPage.tsx that depend on it — can
+# silently drift from the real schema. On drift, files a deduped GitHub issue
+# via the same AI issue-creation pipeline used for security findings.
+#
+# Report-only, consistent with this repo's other CI checks (see unit-tests.yml):
+# it does not fail the build.
+name: GraphQL Schema Drift Check
+
+on:
+  push:
+    paths:
+      - "backend/backend/schema.py"
+      - "frontend/src/schema.graphql"
+      - "frontend/src/pages/MapPage.tsx"
+  pull_request:
+    paths:
+      - "backend/backend/schema.py"
+      - "frontend/src/schema.graphql"
+      - "frontend/src/pages/MapPage.tsx"
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  SECRET_KEY: ci-schema-check-secret-key
+  DEBUG: "True"
+
+jobs:
+  schema-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Dump live backend schema
+        working-directory: backend
+        run: python manage.py dump_schema > ../live_schema.graphql
+
+      - name: Diff against checked-in frontend snapshot
+        id: diff
+        run: |
+          if ! diff -Bw live_schema.graphql frontend/src/schema.graphql > schema_diff.txt; then
+            echo "SCHEMA_DRIFT=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create AI-powered GitHub Issue for schema drift
+        if: env.SCHEMA_DRIFT == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install anthropic requests
+          FINDING="Backend GraphQL schema (backend/backend/schema.py) has drifted from the checked-in frontend snapshot (frontend/src/schema.graphql). Diff:
+          $(cat schema_diff.txt)"
+          python .github/scripts/ai_issue_creator.py "$FINDING" --label schema-drift
