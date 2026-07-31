@@ -2,25 +2,35 @@ type Query {
   allLocations(mapName: String): [LocationType]
 }
 
-type Mutation {
-  createLocation(name: String!, x: Float!, y: Float!, mapName: String!): CreateLocationType
-}
-
-type CreateLocationType {
-  location: LocationType
-}
-
 type LocationType {
   id: ID!
   name: String!
   x: Float!
   y: Float!
+  map: String!
   pois: [PointOfInterestType!]!
 }
 
 type PointOfInterestType {
-  id: ID!
-  location: LocationType!
   title: String!
   description: String!
+}
+
+type Mutation {
+  createLocation(mapName: String!, name: String!, x: Float!, y: Float!): CreateLocation
+  updateLocation(id: ID!, name: String, x: Float, y: Float): UpdateLocation
+  deleteLocation(id: ID!): DeleteLocation
+}
+
+type CreateLocation {
+  location: LocationType
+}
+
+type UpdateLocation {
+  location: LocationType
+}
+
+type DeleteLocation {
+  success: Boolean
+  deletedId: ID
 }

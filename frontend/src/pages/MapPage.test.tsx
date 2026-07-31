@@ -252,6 +252,32 @@ test('navigates home when Return to Maps is clicked on the NotFound page', () =>
   expect(screen.getByText('Home')).toBeInTheDocument();
 });
 
+test('navigates home when All Maps is clicked from the map view', () => {
+  renderMapPage();
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('← All Maps'));
+  expect(screen.getByText('Home')).toBeInTheDocument();
+});
+
+test('measures committed and live distance using the image natural width and the map scale', () => {
+  Object.defineProperty(HTMLImageElement.prototype, 'naturalWidth', {
+    configurable: true,
+    value: 2400,
+  });
+  renderMapPage();
+  const img = screen.getByRole('img', { name: 'Underdark' });
+
+  fireEvent.click(screen.getByText('☰'));
+  fireEvent.click(screen.getByText('Distance and Time'));
+
+  fireEvent.click(img, { clientX: 0, clientY: 0 });
+  fireEvent.click(img, { clientX: 3, clientY: 4 });
+  fireEvent.mouseMove(img, { clientX: 6, clientY: 8 });
+
+  expect(screen.getByText('DISTANCE')).toBeInTheDocument();
+  expect(screen.getByText('54.0 mi')).toBeInTheDocument();
+});
+
 function enterEditModeAndClickPin(title = 'Blingdenstone') {
   fireEvent.click(screen.getByText('☰'));
   fireEvent.click(screen.getByText('Enter Edit Mode'));
