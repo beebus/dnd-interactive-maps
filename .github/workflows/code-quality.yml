@@ -13,11 +13,10 @@ jobs:
 
       # Phase 1a: Scan for hardcoded secrets (TruffleHog)
       - name: Check for hardcoded secrets
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: HEAD~1
-          head: HEAD
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+          trufflehog git file://. --since-commit HEAD~1 --only-verified --json > trufflehog_output.json || echo "TRUFFLEHOG_FAILED=true" >> $GITHUB_ENV
+          if [ -s trufflehog_output.json ]; then echo "TRUFFLEHOG_FAILED=true" >> $GITHUB_ENV; fi
 
       # Phase 1b: Python security scan (Bandit)
       - name: Python security scan
@@ -26,8 +25,8 @@ jobs:
           pip install bandit
           bandit -r backend/ -f txt -o bandit_output.txt || echo "BANDIT_FAILED=true" >> $GITHUB_ENV
 
-      # Phase 2: AI creates GitHub Issue if Bandit found problems
-      - name: Create AI-powered GitHub Issue for findings
+      # Phase 2a: AI creates GitHub Issue if Bandit found problems
+      - name: Create AI-powered GitHub Issue for Bandit findings
         if: env.BANDIT_FAILED == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -35,4 +34,15 @@ jobs:
         run: |
           pip install anthropic requests
           FINDING=$(cat bandit_output.txt)
-          python .github/scripts/ai_issue_creator.py "$FINDING"
+          python .github/scripts/ai_issue_creator.py "$FINDING" --label security-scan
+
+      # Phase 2b: AI creates GitHub Issue if TruffleHog found verified secrets
+      - name: Create AI-powered GitHub Issue for secret findings
+        if: env.TRUFFLEHOG_FAILED == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install anthropic requests
+          FINDING=$(cat trufflehog_output.json)
+          python .github/scripts/ai_issue_creator.py "$FINDING" --label secrets-scan

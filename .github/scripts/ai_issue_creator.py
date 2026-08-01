@@ -16,11 +16,11 @@ def _fingerprint(finding_text: str) -> str:
     return hashlib.sha256(finding_text.strip().encode("utf-8")).hexdigest()[:12]
 
 
-def _existing_open_issue(headers: dict, fingerprint: str) -> str | None:
+def _existing_open_issue(headers: dict, fingerprint: str, label: str) -> str | None:
     response = requests.get(
         f"{REPO_API}/issues",
         headers=headers,
-        params={"state": "open", "labels": "security-scan"},
+        params={"state": "open", "labels": label},
     )
     response.raise_for_status()
     for issue in response.json():
@@ -29,11 +29,11 @@ def _existing_open_issue(headers: dict, fingerprint: str) -> str | None:
     return None
 
 
-def create_issue_from_finding(finding_text: str):   # renamed param → fixes "Shadows name"
+def create_issue_from_finding(finding_text: str, label: str = "security-scan"):
     headers = {"Authorization": f"token {os.environ.get('GITHUB_TOKEN', '')}"}
     fingerprint = _fingerprint(finding_text)
 
-    existing_url = _existing_open_issue(headers, fingerprint)
+    existing_url = _existing_open_issue(headers, fingerprint, label)
     if existing_url:
         print(f"Issue already open for this finding, skipping: {existing_url}")
         return
@@ -64,11 +64,14 @@ def create_issue_from_finding(finding_text: str):   # renamed param → fixes "S
     response = requests.post(
         f"{REPO_API}/issues",
         headers=headers,
-        json={"title": issue_data["title"], "body": issue_data["body"], "labels": ["security-scan"]}
+        json={"title": issue_data["title"], "body": issue_data["body"], "labels": [label]}
     )
     print(f"Issue created: {response.json().get('html_url')}")
 
 
 if __name__ == "__main__":
     finding_arg = sys.argv[1] if len(sys.argv) > 1 else "Unknown security finding"
-    create_issue_from_finding(finding_arg)
+    label_arg = "security-scan"
+    if len(sys.argv) > 2 and sys.argv[2] == "--label" and len(sys.argv) > 3:
+        label_arg = sys.argv[3]
+    create_issue_from_finding(finding_arg, label=label_arg)
