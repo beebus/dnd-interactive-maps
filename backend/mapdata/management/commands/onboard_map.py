@@ -23,6 +23,11 @@ Usage examples
 --------------
   python manage.py onboard_map --map elturel --dry-run
   python manage.py onboard_map --map elturel
+  python manage.py onboard_map --map underdark --force   # re-run against a map with existing pins
+
+Refuses to run against a map that already has Location pins in the database
+unless --force is passed, since it has no dedup logic against existing pins
+(analyze_map.py's --create-pins is the right tool for an existing map).
 """
 
 import json
@@ -53,13 +58,36 @@ class Command(BaseCommand):
             action="store_true",
             help="Print the generated fixture entries instead of writing them to the fixture file",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help=(
+                "Proceed even if the map already has Location pins in the database. "
+                "Without this, onboard_map refuses to run against a map that isn't brand-new, "
+                "since it has no logic to avoid generating duplicates of existing pins "
+                "(use analyze_map for that instead)."
+            ),
+        )
 
     def handle(self, *args, **options):
         import os
 
         import anthropic
 
+        from mapdata.models import Location
+
         map_name = options["map"]
+
+        if not options["force"] and Location.objects.filter(map=map_name).exists():
+            self.stderr.write(
+                self.style.ERROR(
+                    f"Map '{map_name}' already has Location pins in the database. "
+                    "onboard_map is for brand-new maps only and doesn't check for duplicates — "
+                    f"use `manage.py analyze_map --map {map_name} --create-pins` instead, or "
+                    "pass --force if you're sure."
+                )
+            )
+            return
 
         image_path = AnalyzeMapCommand._resolve_image(options.get("image_path"), map_name)
         if not image_path.exists():
