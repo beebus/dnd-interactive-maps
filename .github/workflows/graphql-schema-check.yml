@@ -22,6 +22,7 @@ on:
       - "backend/backend/schema.py"
       - "frontend/src/schema.graphql"
       - "frontend/src/pages/MapPage.tsx"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
