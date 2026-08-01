@@ -26,13 +26,33 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  DB_NAME: ci_map_onboarding
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_HOST: localhost
+  DB_PORT: "5432"
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  DEBUG: "True"
+
 jobs:
   onboard:
     runs-on: ubuntu-latest
 
-    env:
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      DEBUG: "True"
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ci_map_onboarding
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v7
@@ -44,6 +64,20 @@ jobs:
 
       - name: Install backend dependencies
         run: pip install -r backend/requirements.txt
+
+      - name: Apply migrations
+        working-directory: backend
+        run: python manage.py migrate --no-input
+
+      - name: Load pin fixtures
+        working-directory: backend
+        run: |
+          if [ -f mapdata/fixtures/locations.json ]; then
+            python manage.py loaddata mapdata/fixtures/locations.json
+            echo "Fixtures loaded."
+          else
+            echo "No fixtures file found — DB will be empty (--force guard won't trigger for any map)."
+          fi
 
       - name: Generate fixture entries for new map
         working-directory: backend
