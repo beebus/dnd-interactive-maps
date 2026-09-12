@@ -39,7 +39,7 @@ class AnalyzeMapPostIssuesTest(TestCase):
         mock_post.return_value = MagicMock(status_code=401, text="Bad credentials")
 
         buf = io.StringIO()
-        with redirect_stdout(buf), patch.dict("os.environ", {"GITHUB_TOKEN": "bad-token"}):
+        with redirect_stdout(buf), patch.dict("os.environ", {"GITHUB_TOKEN": "fake-token-for-tests"}):  # nosec B105
             Command()._post_issues(
                 client=MagicMock(),
                 missing=[{"name": "Menzoberranzan", "x": 0.2, "y": 0.3}],
