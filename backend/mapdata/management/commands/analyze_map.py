@@ -39,6 +39,17 @@ GITHUB_ISSUES_API = "https://api.github.com/repos/beebus/dnd-interactive-maps/is
 NAME_SIMILARITY_MIN = 0.6
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
+# Dense clusters of pins (common on these maps) often sit well within --threshold of
+# each other, and Claude's OCR position estimate for a label is imprecise enough that
+# the positionally-nearest pin is sometimes the wrong (but legitimately different)
+# neighbour. So a strong name match is trusted up to this wider radius before falling
+# back to pure position matching.
+RELAXED_DISTANCE_MULTIPLIER = 3
+
+# Map key -> label names to always ignore (e.g. the map's own title text, which Claude's
+# vision extraction picks up as if it were a location label).
+EXCEPTIONS_PATH = Path(__file__).resolve().parent / "analyze_map_exceptions.json"
+
 
 class Command(BaseCommand):
     help = "Analyze a D&D map image and detect inconsistencies with database pins"
@@ -114,6 +125,14 @@ class Command(BaseCommand):
             self.style.SUCCESS(f"Claude identified {len(image_locs)} locations on the map")
         )
 
+        exceptions = {name.lower() for name in self._load_exceptions(map_name)}
+        if exceptions:
+            before = len(image_locs)
+            image_locs = [loc for loc in image_locs if loc["name"].lower() not in exceptions]
+            skipped = before - len(image_locs)
+            if skipped:
+                self.stdout.write(f"Ignored {skipped} known-exception label(s)")
+
         # noinspection PyUnresolvedReferences
         db_locs = [
             {
@@ -149,6 +168,16 @@ class Command(BaseCommand):
                 return json.load(f)
         except FileNotFoundError:
             return {}
+
+    @staticmethod
+    def _load_exceptions(map_name: str) -> list[str]:
+        """Load {mapKey: [label names to always ignore]} from analyze_map_exceptions.json,
+        sitting alongside this command. Missing/empty file means no exceptions."""
+        try:
+            with open(EXCEPTIONS_PATH, "r", encoding="utf-8") as f:
+                return json.load(f).get(map_name, [])
+        except FileNotFoundError:
+            return []
 
     @classmethod
     def _resolve_image(cls, override, map_name):
@@ -295,7 +324,7 @@ class Command(BaseCommand):
             ],
         )
 
-        raw = msg.content[0].text.strip()
+        raw = next(block for block in msg.content if block.type == "text").text.strip()
         # Strip accidental Markdown code fences
         if raw.startswith("```"):
             parts = raw.split("```", 2)
@@ -325,35 +354,44 @@ class Command(BaseCommand):
     def _compare(image_locs, db_locs, threshold):
         missing = []
         mismatched = []
+        relaxed_threshold = threshold * RELAXED_DISTANCE_MULTIPLIER
 
         for i_loc in image_locs:
             if not db_locs:
                 missing.append(i_loc)
                 continue
 
-            nearest = min(
-                db_locs,
-                key=lambda d: math.hypot(d["x"] - i_loc["x"], d["y"] - i_loc["y"]),
-            )
-            dist = math.hypot(nearest["x"] - i_loc["x"], nearest["y"] - i_loc["y"])
+            def dist_to(d):
+                return math.hypot(d["x"] - i_loc["x"], d["y"] - i_loc["y"])
+
+            def similarity_to(d):
+                return SequenceMatcher(None, i_loc["name"].lower(), d["name"].lower()).ratio()
+
+            # Dense pin clusters plus imprecise OCR coordinates can make the positionally
+            # nearest pin the wrong one, even though a well-named match exists just a bit
+            # further away. Prefer that name match first, within a wider radius.
+            name_matches = [d for d in db_locs if similarity_to(d) >= NAME_SIMILARITY_MIN]
+            if name_matches:
+                best_name_match = min(name_matches, key=dist_to)
+                if dist_to(best_name_match) <= relaxed_threshold:
+                    continue  # matched — same pin, imprecise label position
+
+            nearest = min(db_locs, key=dist_to)
+            dist = dist_to(nearest)
 
             if dist > threshold:
                 missing.append(i_loc)
             else:
-                similarity = SequenceMatcher(
-                    None, i_loc["name"].lower(), nearest["name"].lower()
-                ).ratio()
-                if similarity < NAME_SIMILARITY_MIN:
-                    mismatched.append(
-                        {
-                            "map_name": i_loc["name"],
-                            "db_name": nearest["name"],
-                            "db_id": nearest["id"],
-                            "distance": dist,
-                            "x": i_loc["x"],
-                            "y": i_loc["y"],
-                        }
-                    )
+                mismatched.append(
+                    {
+                        "map_name": i_loc["name"],
+                        "db_name": nearest["name"],
+                        "db_id": nearest["id"],
+                        "distance": dist,
+                        "x": i_loc["x"],
+                        "y": i_loc["y"],
+                    }
+                )
 
         return missing, mismatched
 
@@ -401,10 +439,29 @@ class Command(BaseCommand):
             "UTF-16, which Django's loaddata cannot read.)"
         )
 
-    def _post_issues(self, client, missing, mismatched, map_name):
+    def _post_issue(self, headers, body):
         import requests
 
+        resp = requests.post(GITHUB_ISSUES_API, headers=headers, json=body, timeout=15)
+        if resp.status_code != 201:
+            self.stderr.write(
+                self.style.ERROR(
+                    f"GitHub issue creation failed ({resp.status_code}): {resp.text[:500]}"
+                )
+            )
+            return
+        self.stdout.write(f"Issue created: {resp.json()['html_url']}")
+
+    def _post_issues(self, client, missing, mismatched, map_name):
         token = os.environ.get("GITHUB_TOKEN", "")
+        if not token:
+            self.stderr.write(
+                self.style.ERROR(
+                    "GITHUB_TOKEN is not set — cannot create issues. "
+                    "Add it to .env (see .env.example)."
+                )
+            )
+            return
         headers = {
             "Authorization": f"token {token}",
             "Content-Type": "application/json",
@@ -420,9 +477,7 @@ class Command(BaseCommand):
                     "but no database pin exists nearby."
                 ),
             )
-            resp = requests.post(GITHUB_ISSUES_API, headers=headers, json=body, timeout=15)
-            url = resp.json().get("html_url", "(no url)")
-            self.stdout.write(f"Issue created: {url}")
+            self._post_issue(headers, body)
 
         for m in mismatched:
             body = self._draft_issue(  # type: ignore
@@ -434,9 +489,7 @@ class Command(BaseCommand):
                     f"Normalised distance: {m['distance']:.4f}."
                 ),
             )
-            resp = requests.post(GITHUB_ISSUES_API, headers=headers, json=body, timeout=15)
-            url = resp.json().get("html_url", "(no url)")
-            self.stdout.write(f"Issue created: {url}")
+            self._post_issue(headers, body)
 
     @staticmethod
     def _draft_issue(client, kind, detail):
@@ -460,4 +513,5 @@ class Command(BaseCommand):
                 }
             ],
         )
-        return json.loads(msg.content[0].text.strip())
+        text_block = next(block for block in msg.content if block.type == "text")
+        return json.loads(text_block.text.strip())
