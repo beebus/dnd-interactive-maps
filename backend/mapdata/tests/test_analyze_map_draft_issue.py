@@ -11,7 +11,7 @@ class AnalyzeMapDraftIssueTest(TestCase):
     def _client_returning(title, body):
         client = MagicMock()
         client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text=json.dumps({"title": title, "body": body}))]
+            content=[MagicMock(type="text", text=json.dumps({"title": title, "body": body}))]
         )
         return client
 

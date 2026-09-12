@@ -12,7 +12,9 @@ class AnalyzeMapPostIssuesTest(TestCase):
     @patch.object(Command, "_draft_issue")
     def test_posts_an_issue_for_each_missing_and_mismatched_entry(self, mock_draft, mock_post):
         mock_draft.return_value = {"title": "t", "body": "b"}
-        mock_post.return_value = MagicMock(json=lambda: {"html_url": "https://github.com/example/issues/1"})
+        mock_post.return_value = MagicMock(
+            status_code=201, json=lambda: {"html_url": "https://github.com/example/issues/1"}
+        )
 
         missing = [{"name": "Menzoberranzan", "x": 0.2, "y": 0.3}]
         mismatched = [
@@ -29,3 +31,31 @@ class AnalyzeMapPostIssuesTest(TestCase):
         first_call = mock_post.call_args_list[0]
         self.assertEqual(first_call.kwargs["headers"]["Authorization"], "token test-token-placeholder")
         self.assertIn("Issue created: https://github.com/example/issues/1", buf.getvalue())
+
+    @patch("requests.post")
+    @patch.object(Command, "_draft_issue")
+    def test_surfaces_github_error_instead_of_swallowing_it(self, mock_draft, mock_post):
+        mock_draft.return_value = {"title": "t", "body": "b"}
+        mock_post.return_value = MagicMock(status_code=401, text="Bad credentials")
+
+        buf = io.StringIO()
+        with redirect_stdout(buf), patch.dict("os.environ", {"GITHUB_TOKEN": "bad-token"}):
+            Command()._post_issues(
+                client=MagicMock(),
+                missing=[{"name": "Menzoberranzan", "x": 0.2, "y": 0.3}],
+                mismatched=[],
+                map_name="underdark",
+            )
+
+        self.assertNotIn("Issue created", buf.getvalue())
+
+    @patch.object(Command, "_draft_issue")
+    def test_skips_posting_when_no_token_configured(self, mock_draft):
+        with patch.dict("os.environ", {}, clear=True):
+            Command()._post_issues(
+                client=MagicMock(),
+                missing=[{"name": "Menzoberranzan", "x": 0.2, "y": 0.3}],
+                mismatched=[],
+                map_name="underdark",
+            )
+        mock_draft.assert_not_called()
