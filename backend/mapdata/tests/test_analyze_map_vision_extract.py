@@ -11,7 +11,7 @@ class AnalyzeMapVisionExtractTest(TestCase):
     @staticmethod
     def _client_returning(text):
         client = MagicMock()
-        client.messages.create.return_value = MagicMock(content=[MagicMock(text=text)])
+        client.messages.create.return_value = MagicMock(content=[MagicMock(type="text", text=text)])
         return client
 
     def test_extracts_and_normalizes_locations(self):
