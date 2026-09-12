@@ -20,7 +20,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:15
         env:
           POSTGRES_DB: ci_e2e
           POSTGRES_USER: postgres
