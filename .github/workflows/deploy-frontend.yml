@@ -38,6 +38,12 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          # frontend/.env.production is gitignored (per-environment config), so Vite
+          # never sees it here — these must be supplied explicitly or the build falls
+          # back to apolloClient.ts's localhost:8000 default, breaking prod entirely.
+          VITE_GRAPHQL_URI: ${{ secrets.FRONTEND_VITE_GRAPHQL_URI }}
+          VITE_API_URL: ${{ secrets.FRONTEND_VITE_API_URL }}
         run: npm run build
 
       - name: Configure AWS credentials
