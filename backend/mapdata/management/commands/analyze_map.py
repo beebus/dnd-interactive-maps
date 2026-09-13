@@ -146,7 +146,8 @@ class Command(BaseCommand):
         self.stdout.write(f"Database   : {len(db_locs)} pins for map '{map_name}'")
 
         missing, mismatched = self._compare(image_locs, db_locs, threshold)  # type: ignore
-        self._print_report(missing, mismatched)
+        orphans = self._find_orphans(db_locs, image_locs, threshold)  # type: ignore
+        self._print_report(missing, mismatched, orphans)
 
         if options["create_pins"] and missing:
             self._create_pins(missing, map_name, display_w, display_h, location_model=Location)
@@ -299,6 +300,9 @@ class Command(BaseCommand):
             "and landmarks — that appears as a text label directly on this map. "
             "For each location, estimate the pixel coordinates (x from the left edge, "
             "y from the top edge) of the centre of its text label. "
+            "Do NOT include the map's own title or caption — typically much larger, "
+            "stylized, or decorative text set apart from the map art (e.g. in a corner "
+            "or margin) that names the map itself rather than a specific place on it. "
             "Respond with ONLY a valid JSON array and nothing else:\n"
             '[{"name": "Menzoberranzan", "x": 312, "y": 204}, ...]'
         )
@@ -395,8 +399,39 @@ class Command(BaseCommand):
 
         return missing, mismatched
 
-    def _print_report(self, missing, mismatched):
-        if not missing and not mismatched:
+    @staticmethod
+    def _find_orphans(db_locs, image_locs, threshold):
+        """DB pins with no corresponding label on the map image at all — e.g. a pin
+        accidentally created for the map's own title text. Symmetric to the MISSING
+        check in _compare(), but starting from the database's point of view."""
+        relaxed_threshold = threshold * RELAXED_DISTANCE_MULTIPLIER
+        orphans = []
+
+        for d_loc in db_locs:
+            if not image_locs:
+                orphans.append(d_loc)
+                continue
+
+            def dist_to(i):
+                return math.hypot(d_loc["x"] - i["x"], d_loc["y"] - i["y"])
+
+            def similarity_to(i):
+                return SequenceMatcher(None, d_loc["name"].lower(), i["name"].lower()).ratio()
+
+            name_matches = [i for i in image_locs if similarity_to(i) >= NAME_SIMILARITY_MIN]
+            if name_matches and min(dist_to(i) for i in name_matches) <= relaxed_threshold:
+                continue  # matched — same location, imprecise label position
+
+            if min(dist_to(i) for i in image_locs) <= threshold:
+                continue  # matched positionally, just under a different name (a mismatch, not an orphan)
+
+            orphans.append(d_loc)
+
+        return orphans
+
+    def _print_report(self, missing, mismatched, orphans=None):
+        orphans = orphans or []
+        if not missing and not mismatched and not orphans:
             self.stdout.write(self.style.SUCCESS("\nNo inconsistencies found."))
             return
 
@@ -416,6 +451,15 @@ class Command(BaseCommand):
             for m in mismatched:
                 self.stdout.write(
                     f"  • Map: '{m['map_name']}'  →  DB id={m['db_id']} '{m['db_name']}'"
+                )
+
+        if orphans:
+            self.stdout.write(
+                self.style.WARNING(f"\n{len(orphans)} ORPHAN pin(s) — in DB but not found on the map image:")
+            )
+            for o in orphans:
+                self.stdout.write(
+                    f"  • id={o['id']:<5} {o['name']:40s}  (normalised pos {o['x']:.3f}, {o['y']:.3f})"
                 )
 
     def _create_pins(self, missing, map_name, display_w, display_h, location_model):

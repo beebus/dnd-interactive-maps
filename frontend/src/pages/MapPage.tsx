@@ -226,7 +226,9 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
   const updateImageScale = () => {
     if (imgRef.current) {
       const rect = imgRef.current.getBoundingClientRect();
-      setImageScale(rect.width / 1200);
+      // Pin x/y are stored in the image's native pixel space, so the scale factor
+      // must use the image's actual natural width, not a fixed reference width.
+      setImageScale(rect.width / (imgRef.current.naturalWidth || naturalWidth));
       if (imgRef.current.naturalWidth) {
         setNaturalWidth(imgRef.current.naturalWidth);
       }
@@ -271,19 +273,19 @@ function MapPageInner({ mapLocation }: { mapLocation: MapLocation }) {
     for (let i = 1; i < distancePath.length; i++) {
       const dx = distancePath[i].x - distancePath[i - 1].x;
       const dy = distancePath[i].y - distancePath[i - 1].y;
-      total += Math.sqrt(dx * dx + dy * dy) * (naturalWidth / 1200) * currentVariant.feetPerPixel;
+      total += Math.sqrt(dx * dx + dy * dy) * currentVariant.feetPerPixel;
     }
     return total;
-  }, [distancePath, currentVariant.feetPerPixel, naturalWidth]);
+  }, [distancePath, currentVariant.feetPerPixel]);
 
   const displayFeet = React.useMemo(() => {
     if (!mousePos || distancePath.length < 1 || !currentVariant.feetPerPixel) return committedFeet;
     const last = distancePath[distancePath.length - 1];
     const dx = mousePos.x - last.x;
     const dy = mousePos.y - last.y;
-    const liveDist = Math.sqrt(dx * dx + dy * dy) * (naturalWidth / 1200) * currentVariant.feetPerPixel;
+    const liveDist = Math.sqrt(dx * dx + dy * dy) * currentVariant.feetPerPixel;
     return committedFeet + liveDist;
-  }, [committedFeet, mousePos, distancePath, currentVariant.feetPerPixel, naturalWidth]);
+  }, [committedFeet, mousePos, distancePath, currentVariant.feetPerPixel]);
 
   if (loading) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Loading...</p>;
   if (error) return <p style={{ color: '#e8d9b5', padding: '2rem' }}>Error loading map data</p>;

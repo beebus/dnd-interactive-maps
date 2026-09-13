@@ -63,6 +63,14 @@ beforeEach(() => {
       width: 1200, height: 800, top: 0, left: 0, right: 1200, bottom: 800, x: 0, y: 0, toJSON: () => {},
     }),
   });
+
+  // jsdom never loads real images, so naturalWidth defaults to 0 — but a prior test
+  // may have overridden it on the prototype (see 'measures committed and live distance'
+  // below), which would otherwise leak into every test that runs after it.
+  Object.defineProperty(HTMLImageElement.prototype, 'naturalWidth', {
+    configurable: true,
+    value: 0,
+  });
 });
 
 test('renders the map image for a valid slug', () => {

@@ -1004,8 +1004,8 @@
   "pk": 319,
   "fields": {
     "name": "The Garden",
-    "x": 532.0,
-    "y": 304.0,
+    "x": 796.6700000000001,
+    "y": 455.24,
     "map": "elturel"
   }
 },
@@ -1013,10 +1013,60 @@
   "model": "mapdata.location",
   "pk": 320,
   "fields": {
-    "name": "Pillar of Pedagogy",
-    "x": 838.0,
-    "y": 283.0,
+    "name": "Pillars of Pedagogy",
+    "x": 1005.5999999999999,
+    "y": 339.59999999999997,
     "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 321,
+  "fields": {
+    "name": "High Hall",
+    "x": 705.3225,
+    "y": 717.3025,
+    "map": "elturel"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 322,
+  "fields": {
+    "name": "Maiden's Leap",
+    "x": 937.4350000000001,
+    "y": 214.1425,
+    "map": "elturel"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 323,
+  "fields": {
+    "name": "Shiarra's Market",
+    "x": 1114.14,
+    "y": 654.4075,
+    "map": "elturel"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 324,
+  "fields": {
+    "name": "The Dragoneye Docks",
+    "x": 1209.98,
+    "y": 807.1525,
+    "map": "elturel"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 325,
+  "fields": {
+    "name": "Grand Cemetery",
+    "x": 236.60500000000002,
+    "y": 618.4675,
+    "map": "elturel"
   }
 }
 ]

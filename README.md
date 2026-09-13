@@ -132,5 +132,8 @@ docker compose exec backend python manage.py loaddata mapdata/fixtures/locations
 ### Exporting pins to the fixture
 After adding new pins (via Edit Mode or `--create-pins`), export them for CI:
 ```
-docker compose exec backend python manage.py dumpdata mapdata.location --indent 2 > backend/mapdata/fixtures/locations.json
+docker compose exec backend python manage.py dumpdata mapdata.location --indent 2 --output mapdata/fixtures/locations.json
 ```
+Use `--output` rather than shell `>` redirection — PowerShell's `>` writes UTF-16, which Django's
+`loaddata` cannot read. The path is relative to the container's working directory, so it's
+`mapdata/fixtures/locations.json`, not `backend/mapdata/fixtures/locations.json`.
