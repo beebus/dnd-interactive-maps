@@ -137,3 +137,30 @@ docker compose exec backend python manage.py dumpdata mapdata.location --indent 
 Use `--output` rather than shell `>` redirection — PowerShell's `>` writes UTF-16, which Django's
 `loaddata` cannot read. The path is relative to the container's working directory, so it's
 `mapdata/fixtures/locations.json`, not `backend/mapdata/fixtures/locations.json`.
+
+## Frontend Production Environment Variables
+
+Production API URLs aren't hardcoded — they're read from Vite env vars at build time
+(`frontend/src/graphql/apolloClient.ts`, `frontend/src/components/ContactModal.tsx`).
+Without them, the build silently falls back to `http://localhost:8000`, which only works
+on your own machine — a production build missing these will deploy successfully but be
+unable to load any data.
+
+| Variable           | Used for                                  |
+|---------------------|--------------------------------------------|
+| `VITE_GRAPHQL_URI`  | Apollo Client's GraphQL endpoint           |
+| `VITE_API_URL`      | Non-GraphQL API calls (e.g. the contact form) |
+
+**Local production build** (running `npm run build` yourself): copy
+`frontend/.env.production.example` to `frontend/.env.production` and fill in the real backend
+URL. Vite loads this file automatically. It's gitignored because it's environment-specific,
+not because the values are secret.
+
+**CI build** (`.github/workflows/deploy-frontend.yml`): the same two values live as GitHub
+Actions repository secrets — `FRONTEND_VITE_GRAPHQL_URI` and `FRONTEND_VITE_API_URL` — passed
+to the build step as env vars. `frontend/.env.production` doesn't exist in the CI checkout
+(it's gitignored), so these secrets are the *only* source of truth for automated deploys.
+
+If the deployed site fails to load any data and the browser console shows GraphQL requests
+going to `localhost:8000`, this is almost always why — check that both secrets are set and
+that the build step in `deploy-frontend.yml` still references them.

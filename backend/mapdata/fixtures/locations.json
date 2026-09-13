@@ -1068,5 +1068,495 @@
     "y": 618.4675,
     "map": "elturel"
   }
+},
+{
+  "model": "mapdata.location",
+  "pk": 326,
+  "fields": {
+    "name": "High Hall",
+    "x": 450.0,
+    "y": 515.0,
+    "map": "elturel_avernus"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 327,
+  "fields": {
+    "name": "Torm's Reach",
+    "x": 727.0,
+    "y": 194.0,
+    "map": "elturel_avernus"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 328,
+  "fields": {
+    "name": "Torm's Blade",
+    "x": 680.0,
+    "y": 281.0,
+    "map": "elturel_avernus"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 329,
+  "fields": {
+    "name": "Grand Cemetery",
+    "x": 139.0,
+    "y": 449.0,
+    "map": "elturel_avernus"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 330,
+  "fields": {
+    "name": "Erudite Outfitters & Clothiers",
+    "x": 923.0,
+    "y": 409.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 331,
+  "fields": {
+    "name": "Way of the Lion",
+    "x": 1334.0,
+    "y": 467.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 332,
+  "fields": {
+    "name": "Gatehouse (Main Entrance)",
+    "x": 1238.0,
+    "y": 459.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 333,
+  "fields": {
+    "name": "Bath and Steam House",
+    "x": 1227.0,
+    "y": 493.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 334,
+  "fields": {
+    "name": "Smithy and Stables",
+    "x": 1196.0,
+    "y": 527.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 335,
+  "fields": {
+    "name": "Temple of Oghma",
+    "x": 1151.0,
+    "y": 554.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 336,
+  "fields": {
+    "name": "Granary",
+    "x": 1124.0,
+    "y": 583.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 337,
+  "fields": {
+    "name": "House of Rest",
+    "x": 1079.0,
+    "y": 616.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 338,
+  "fields": {
+    "name": "The Hearth",
+    "x": 1016.0,
+    "y": 631.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 339,
+  "fields": {
+    "name": "House of the Binder",
+    "x": 969.0,
+    "y": 575.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 340,
+  "fields": {
+    "name": "Emerald Door",
+    "x": 865.0,
+    "y": 424.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 341,
+  "fields": {
+    "name": "Exaltation",
+    "x": 571.0,
+    "y": 368.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 342,
+  "fields": {
+    "name": "The Great Library",
+    "x": 482.0,
+    "y": 218.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 343,
+  "fields": {
+    "name": "The Grove",
+    "x": 316.0,
+    "y": 488.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 344,
+  "fields": {
+    "name": "Court of Air",
+    "x": 1049.0,
+    "y": 481.0,
+    "map": "candlekeep"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 345,
+  "fields": {
+    "name": "Pillars of Pedagogy",
+    "x": 352.0,
+    "y": 369.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 346,
+  "fields": {
+    "name": "Erudite Outfitters & Clothiers",
+    "x": 228.0,
+    "y": 454.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 347,
+  "fields": {
+    "name": "Emerald Door",
+    "x": 155.0,
+    "y": 510.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 348,
+  "fields": {
+    "name": "House of the Binder",
+    "x": 268.0,
+    "y": 708.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 349,
+  "fields": {
+    "name": "The Hearth",
+    "x": 343.0,
+    "y": 768.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 350,
+  "fields": {
+    "name": "House of Rest",
+    "x": 435.0,
+    "y": 750.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 351,
+  "fields": {
+    "name": "Granary",
+    "x": 496.0,
+    "y": 707.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 352,
+  "fields": {
+    "name": "Temple of Oghma",
+    "x": 533.0,
+    "y": 662.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 353,
+  "fields": {
+    "name": "Smithy and Stables",
+    "x": 589.0,
+    "y": 620.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 354,
+  "fields": {
+    "name": "Bath and Steam House",
+    "x": 638.0,
+    "y": 576.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 355,
+  "fields": {
+    "name": "Way of the Lion",
+    "x": 768.0,
+    "y": 554.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 356,
+  "fields": {
+    "name": "Gatehouse (Main Entrance)",
+    "x": 645.0,
+    "y": 533.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 357,
+  "fields": {
+    "name": "Court of Air",
+    "x": 402.0,
+    "y": 574.0,
+    "map": "candlekeep_outer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 358,
+  "fields": {
+    "name": "Yon",
+    "x": 240.0,
+    "y": 445.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 359,
+  "fields": {
+    "name": "Motherhorn",
+    "x": 407.0,
+    "y": 435.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 360,
+  "fields": {
+    "name": "Fly Beacons",
+    "x": 331.0,
+    "y": 599.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 361,
+  "fields": {
+    "name": "Lockbury Henge",
+    "x": 174.0,
+    "y": 705.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 362,
+  "fields": {
+    "name": "Brigganock Mine",
+    "x": 415.0,
+    "y": 843.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 363,
+  "fields": {
+    "name": "Downfall",
+    "x": 620.0,
+    "y": 578.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 364,
+  "fields": {
+    "name": "Palace Of Heart's Desire",
+    "x": 782.0,
+    "y": 528.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 365,
+  "fields": {
+    "name": "Brigand's Tollway",
+    "x": 726.0,
+    "y": 682.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 366,
+  "fields": {
+    "name": "Hither",
+    "x": 705.0,
+    "y": 793.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 367,
+  "fields": {
+    "name": "Outer Vale",
+    "x": 534.0,
+    "y": 802.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 368,
+  "fields": {
+    "name": "Slanty Tower",
+    "x": 632.0,
+    "y": 923.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 369,
+  "fields": {
+    "name": "Till Mill",
+    "x": 723.0,
+    "y": 963.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 370,
+  "fields": {
+    "name": "Thither",
+    "x": 1205.0,
+    "y": 490.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 371,
+  "fields": {
+    "name": "Little Oak",
+    "x": 1176.0,
+    "y": 439.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 372,
+  "fields": {
+    "name": "Loomlurch",
+    "x": 1010.0,
+    "y": 522.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 373,
+  "fields": {
+    "name": "Wayward Pool",
+    "x": 1183.0,
+    "y": 655.0,
+    "map": "prismeer"
+  }
+},
+{
+  "model": "mapdata.location",
+  "pk": 374,
+  "fields": {
+    "name": "Nib's Cave",
+    "x": 1104.0,
+    "y": 826.0,
+    "map": "prismeer"
+  }
 }
 ]
