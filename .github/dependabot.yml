@@ -11,6 +11,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "wednesday"
+    ignore:
+      # graphene 3.4.3 requires graphql-core<3.3; 3.3.0 breaks dependency resolution
+      - dependency-name: "graphql-core"
+        versions: [ ">=3.3" ]
     groups:
       pip-minor-patch:
         update-types: [ "minor", "patch" ]
