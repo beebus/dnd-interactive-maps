@@ -1,4 +1,4 @@
-anthropic>=1.15.0
+anthropic>=2.3.0
 gunicorn>=26.2.0
 asgiref==3.13.0
 requests>=2.34.2
@@ -10,7 +10,7 @@ graphql-core==3.2.13
 graphql-relay==3.2.0
 promise==2.3
 psycopg2-binary==2.9.13
-python-dateutil==2.9.0.post0
+python-dateutil==3.0.0
 python-dotenv==1.2.4
 six==1.17.0
 sqlparse==0.6.0
