@@ -15,6 +15,9 @@ updates:
       # graphene 3.4.3 requires graphql-core<3.3; 3.3.0 breaks dependency resolution
       - dependency-name: "graphql-core"
         versions: [ ">=3.3" ]
+      # graphene 3.4.3 requires python-dateutil<3; 3.0.0 breaks dependency resolution
+      - dependency-name: "python-dateutil"
+        versions: [ ">=3" ]
     groups:
       # One PR for all backend Python dependency updates (requirements*.txt)
       pip-all:
