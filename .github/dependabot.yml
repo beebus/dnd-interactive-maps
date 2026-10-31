@@ -16,8 +16,9 @@ updates:
       - dependency-name: "graphql-core"
         versions: [ ">=3.3" ]
     groups:
-      pip-minor-patch:
-        update-types: [ "minor", "patch" ]
+      # One PR for all backend Python dependency updates (requirements*.txt)
+      pip-all:
+        patterns: [ "*" ]
 
   # npm - React frontend
   - package-ecosystem: "npm"
